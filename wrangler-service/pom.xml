@@ -71,7 +71,7 @@
     <dependency>
       <groupId>org.eclipse.jetty.orbit</groupId>
       <artifactId>javax.mail.glassfish</artifactId>
-      <version>RELEASE</version>
+      <version>1.4.1.v201005082020</version>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
