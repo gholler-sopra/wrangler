@@ -151,7 +151,6 @@ public class ConnectionService extends AbstractHttpServiceHandler {
       // Extract the body of the request and transform it to the Connection object.
       RequestExtractor extractor = new RequestExtractor(request);
       Connection connection = extractor.getContent("utf-8", Connection.class);
-
       if (ConnectionType.fromString(connection.getType().getType()) == ConnectionType.UNDEFINED) {
         error(responder, "Invalid connection type set.");
         return;

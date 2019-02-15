@@ -32,6 +32,7 @@ public enum ConnectionType {
   GCS("gcs"),
   BIGQUERY("bigquery"),
   KAFKA("kafka"),
+  ADLS("adls"),
   SPANNER("spanner");
 
   private String type;
