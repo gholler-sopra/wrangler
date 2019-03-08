@@ -23,7 +23,6 @@ import co.cask.cdap.api.dataset.lib.FileSet;
 import co.cask.cdap.api.dataset.lib.FileSetProperties;
 import co.cask.cdap.api.dataset.table.Table;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
-import co.cask.wrangler.service.adls.ADLSHandler;
 import co.cask.wrangler.service.bigquery.BigQueryService;
 import co.cask.wrangler.service.connections.ConnectionService;
 import co.cask.wrangler.service.connections.ConnectionTypeConfig;
@@ -93,8 +92,7 @@ public class DataPrep extends AbstractApplication<ConnectionTypeConfig> {
                new S3Service(),
                new GCSService(),
                new BigQueryService(),
-               new SpannerService(),
-               new ADLSHandler()
+               new SpannerService()
     );
   }
 }
