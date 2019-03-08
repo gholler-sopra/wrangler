@@ -226,6 +226,12 @@
       <version>${hsql.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.8.2</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
