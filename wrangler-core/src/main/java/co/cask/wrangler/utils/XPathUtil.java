@@ -30,8 +30,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -54,6 +56,7 @@ public final class XPathUtil {
     String xmlString = Bytes.toString(iByteBuffer.getBytes());
 
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 
     factory.setNamespaceAware(true);
     factory.setValidating(true);
@@ -65,8 +68,10 @@ public final class XPathUtil {
 
     // Use a Transformer for output
     TransformerFactory tFactory = TransformerFactory.newInstance();
+    tFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
     StreamSource stylesource = new StreamSource(styleSheetStream);
     Transformer transformer = tFactory.newTransformer(stylesource);
+    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 
     DOMSource source = new DOMSource(document);
 
