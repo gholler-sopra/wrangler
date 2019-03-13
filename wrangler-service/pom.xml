@@ -38,7 +38,6 @@
       <artifactId>azure-data-lake-store-sdk</artifactId>
       <version>2.3.3</version>
     </dependency>
-    
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-keyvault</artifactId>
@@ -225,12 +224,6 @@
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
       <version>${hsql.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>1.8.2</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
