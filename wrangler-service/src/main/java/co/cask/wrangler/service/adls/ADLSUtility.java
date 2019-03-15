@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class ADLSUtilityClass {
+public class ADLSUtility {
 
     public static String testConnection(ADLStoreClient client) throws IOException {
         try {

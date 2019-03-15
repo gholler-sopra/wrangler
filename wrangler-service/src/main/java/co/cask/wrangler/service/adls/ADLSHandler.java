@@ -115,7 +115,7 @@ public class ADLSHandler extends AbstractWranglerService {
             // creating a client doesn't test the connection, we will check root directories so the connection is tested.
             try {
                 ADLStoreClient client = initializeAndGetADLSClient(connection);
-                String output = ADLSUtilityClass.testConnection(client);
+                String output = ADLSUtility.testConnection(client);
                 ServiceUtils.success(responder, output);
             } catch (IOException e) {
                 ServiceUtils.error(responder, e.getMessage());
@@ -168,10 +168,8 @@ public class ADLSHandler extends AbstractWranglerService {
             ADLStoreClient adlStoreClient = initializeAndGetADLSClient(connection[0]);
             if (path == null || path.equals("")) {
                 path = defaultPath;
-                response = ADLSUtilityClass.initClientReturnResponse(adlStoreClient, path);
-            } else {
-                response = ADLSUtilityClass.initClientReturnResponse(adlStoreClient, path);
             }
+            response = ADLSUtility.initClientReturnResponse(adlStoreClient, path);
             sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
         } catch (IOException | TransactionFailureException e) {
             ServiceUtils.error(responder, e.getMessage());
@@ -228,8 +226,8 @@ public class ADLSHandler extends AbstractWranglerService {
      */
     private void fetchFileFromClient(Connection connection, HttpServiceResponder responder, FileQueryDetails fileQueryDetails) throws IOException {
         ADLStoreClient client = initializeAndGetADLSClient(connection);
-        DirectoryEntry file = ADLSUtilityClass.getFileFromClient(client, fileQueryDetails.getFilePath());
-        try (InputStream inputStream = ADLSUtilityClass.clientInputStream(client, fileQueryDetails)) {
+        DirectoryEntry file = ADLSUtility.getFileFromClient(client, fileQueryDetails.getFilePath());
+        try (InputStream inputStream = ADLSUtility.clientInputStream(client, fileQueryDetails)) {
             if (fileQueryDetails.getHeader() != null && fileQueryDetails.getHeader().equalsIgnoreCase("text/plain")) {
                 loadSamplableFile(connection.getId(), responder, fileQueryDetails.getScope(), inputStream, file, fileQueryDetails.getLines(), fileQueryDetails.getFraction(), fileQueryDetails.getSampler());
                 return;
