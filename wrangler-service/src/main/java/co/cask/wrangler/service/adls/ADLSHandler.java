@@ -49,7 +49,8 @@ import com.google.gson.*;
 import com.microsoft.azure.datalake.store.ADLException;
 import com.microsoft.azure.datalake.store.ADLStoreClient;
 import com.microsoft.azure.datalake.store.DirectoryEntry;
-import com.microsoft.azure.datalake.store.DirectoryEntryType;
+import com.microsoft.azure.datalake.store.oauth2.AccessTokenProvider;
+import com.microsoft.azure.datalake.store.oauth2.ClientCredsTokenProvider;
 import com.sun.istack.Nullable;
 import org.apache.tephra.TransactionFailureException;
 
@@ -96,22 +97,16 @@ public class ADLSHandler extends AbstractWranglerService {
                 return;
             }
             // creating a client doesn't test the connection, we will check root directories so the connection is tested.
-            String output = returnResponse(connection, responder);
-            ServiceUtils.success(responder, output);
+            try {
+                ADLStoreClient client = initializeAndGetADLSClient(connection);
+                String output = ADLSUtilityClass.testConnection(client);
+                ServiceUtils.success(responder, output);
+            } catch (IOException e) {
+                ServiceUtils.error(responder, e.getMessage());
+            }
         } catch (IllegalArgumentException e) {
             ServiceUtils.error(responder, e.getMessage());
         }
-    }
-
-
-    private String returnResponse(Connection connection, HttpServiceResponder responder) {
-        ADLStoreClient client = InitializeClient.initializeAndGetADLSClient(connection);
-        try {
-            client.enumerateDirectory("/");
-        } catch (IOException e) {
-            ServiceUtils.error(responder, e.getMessage());
-        }
-        return "Success";
     }
 
     private boolean validateConnection(String connectionId, Connection connection, HttpServiceResponder responder) {
@@ -153,46 +148,17 @@ public class ADLSHandler extends AbstractWranglerService {
                 return;
             }
             JsonObject response;
-            if (path == null) {
-                response = initClientReturnResponse(connection[0], defaultPath, responder);
-            } else if (path.equals("")) {
-                response = initClientReturnResponse(connection[0], defaultPath, responder);
+            ADLStoreClient adlStoreClient = initializeAndGetADLSClient(connection[0]);
+            if(path==null || path.equals("")){
+                path = defaultPath;
+                response = ADLSUtilityClass.initClientReturnResponse(adlStoreClient, path);
             } else {
-                response = initClientReturnResponse(connection[0], path, responder);
+                response = ADLSUtilityClass.initClientReturnResponse(adlStoreClient, path);
             }
             sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
         } catch (IOException | TransactionFailureException e) {
             ServiceUtils.error(responder, e.getMessage());
         }
-    }
-
-    private JsonObject initClientReturnResponse(Connection connection, String path, HttpServiceResponder responder) throws IOException {
-        ADLStoreClient adlStoreClient = InitializeClient.initializeAndGetADLSClient(connection);
-        if (!adlStoreClient.checkExists(path)) {
-            ServiceUtils.error(responder, "Given path doesn't exist");
-        }
-        List<DirectoryEntry> list = adlStoreClient.enumerateDirectory(path);
-        JsonArray values = new JsonArray();
-        for (DirectoryEntry entry : list) {
-            JsonObject object = new JsonObject();
-            object.addProperty("name", entry.name);
-            object.addProperty("path", entry.fullName);
-            object.addProperty("displaySize", entry.length);
-            object.addProperty("type", entry.type.toString());
-            object.addProperty("group", entry.group);
-            object.addProperty("user", entry.user);
-            object.addProperty("permission", entry.permission);
-            object.addProperty("modifiedTime", entry.lastModifiedTime.toString());
-            if (entry.type.equals(DirectoryEntryType.DIRECTORY)) {
-                object.addProperty("directory", true);
-            } else {
-                object.addProperty("directory", false);
-            }
-            values.add(object);
-        }
-        JsonObject response = new JsonObject();
-        response.add("values", values);
-        return response;
     }
 
     // Load files from ADLS into workspace
@@ -224,38 +190,39 @@ public class ADLSHandler extends AbstractWranglerService {
             if (lines == 0) {
                 throw new NumberFormatException("lines to extract only limit random lines should not be zero");
             }
-
             RequestExtractor extractor = new RequestExtractor(request);
             String header = extractor.getHeader(RequestExtractor.CONTENT_TYPE_HEADER, null);
             Connection connection = store.get(connectionId);
             if (!validateConnection(connectionId, connection, responder)) {
                 return;
             }
-            fetchFileFromClient(connection, responder, filePath, header, scope, lines, fraction, sampler);
+            FileQueryDetails fileQueryDetails = new FileQueryDetails(header,filePath,lines,sampler,fraction,scope);
+            fetchFileFromClient(connection, responder, fileQueryDetails);
         } catch (IOException | NumberFormatException e) {
             ServiceUtils.error(responder, e.getMessage());
         }
     }
 
-    private void fetchFileFromClient(Connection connection, HttpServiceResponder responder, String filePath, String header, String scope, int lines, double fraction, String sampler) throws IOException {
-        ADLStoreClient client = InitializeClient.initializeAndGetADLSClient(connection);
-        DirectoryEntry file = client.getDirectoryEntry(filePath);
-        if (file != null) {
-            try (InputStream inputStream = client.getReadStream(file.fullName)) {
-                if (header != null && header.equalsIgnoreCase("text/plain")) {
-                    loadSamplableFile(connection.getId(), responder, scope, inputStream, file, lines, fraction, sampler);
+    /**
+     * A method to fetch a file from an ADLS client
+     * @param connection connection details from the HttpRequest.
+     * @param responder  HttpResponder on which the file data will be dumped.
+     * @param fileQueryDetails Utility class containing the query params of read file API.
+     * @throws IOException
+     */
+    private void fetchFileFromClient(Connection connection, HttpServiceResponder responder, FileQueryDetails fileQueryDetails) throws IOException {
+            ADLStoreClient client = initializeAndGetADLSClient(connection);
+            DirectoryEntry file = ADLSUtilityClass.getFileFromClient(client,fileQueryDetails.getFilePath());
+            try (InputStream inputStream = ADLSUtilityClass.clientInputStream(client,fileQueryDetails)) {
+                if (fileQueryDetails.getHeader() != null && fileQueryDetails.getHeader().equalsIgnoreCase("text/plain")) {
+                    loadSamplableFile(connection.getId(), responder, fileQueryDetails.getScope(), inputStream, file, fileQueryDetails.getLines(), fileQueryDetails.getFraction(), fileQueryDetails.getSampler());
                     return;
                 }
                 loadFile(connection.getId(), responder, inputStream, file);
             } catch (ADLException e) {
                 ServiceUtils.error(responder, e.getMessage());
             }
-        } else {
-            ServiceUtils.error(responder,
-                    "ADLS file not found");
-            return;
         }
-    }
 
     private void loadSamplableFile(String connectionId, HttpServiceResponder responder,
                                    String scope, InputStream inputStream, DirectoryEntry fileEntry,
@@ -480,6 +447,21 @@ public class ADLSHandler extends AbstractWranglerService {
         String fileType = detector.detectFileType(fileName);
         DataType dataType = DataType.fromString(fileType);
         return dataType == null ? DataType.BINARY : dataType;
+    }
+
+    /**
+     * Create an ADLS client using connection details from the HTTP request.
+     * @param connection connection details from the HTTP request.
+     * @return ADLStoreClient
+     */
+    public static ADLStoreClient initializeAndGetADLSClient(Connection connection) {
+        ADLSConfiguration ADLSConfiguration = new ADLSConfiguration(connection);
+        String authTokenEndpoint = ADLSConfiguration.getEndpointURL();
+        String clientId = ADLSConfiguration.getADLSClientId();
+        String clientKey = ADLSConfiguration.getClientKey();
+        String accountFQDN = ADLSConfiguration.getAccountFQDN();
+        AccessTokenProvider provider = new ClientCredsTokenProvider(authTokenEndpoint, clientId, clientKey);
+        return ADLStoreClient.createClient(accountFQDN, provider);
     }
 
 
