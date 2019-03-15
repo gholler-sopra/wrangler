@@ -43,7 +43,7 @@ public class ADLSConfiguration {
             throw new IllegalArgumentException("ADLS properties are not defined. Check connection setting.");
         }
 
-        if (properties.containsKey(CONFIG_FIELDS_JCEKS.get(0)) || properties.containsKey(CONFIG_FIELDS_JCEKS.get(1))) {
+        if (properties.containsKey(CONFIG_FIELDS_JCEKS.get(0))) {
             for (String property : CONFIG_FIELDS_JCEKS) {
 
                 if (!properties.containsKey(property)) {
