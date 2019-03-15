@@ -31,54 +31,54 @@ import java.util.HashMap;
 
 public class AzureClientSecretService {
 
-  private static Logger logger = LoggerFactory.getLogger(AzureClientSecretService.class);
+    private static Logger logger = LoggerFactory.getLogger(AzureClientSecretService.class);
 
-  public static HashMap<String, String> getADLSSecretsUsingJceksAndKV(String keyVaultUrl, HashMap<String, String> credMap) {
-    /* First get the credentials to access KeyVault from Jceks file */
-    HashMap<String, String> keymap = new HashMap<String, String>();
-    try {
-      keymap = getSecretsFromJcek("fs.adl.oauth2.client.id,fs.adl.oauth2.credential");
-      logger.info("KeyVault access identified");
-    } catch (Exception e) {
-      logger.error("jcek Exception : " + e);
+    public static HashMap<String, String> getADLSSecretsUsingJceksAndKV(String keyVaultUrl, HashMap<String, String> credMap) {
+        /* First get the credentials to access KeyVault from Jceks file */
+        HashMap<String, String> keymap = new HashMap<String, String>();
+        try {
+            keymap = getSecretsFromJcek("fs.adl.oauth2.client.id,fs.adl.oauth2.credential");
+            logger.info("KeyVault access identified");
+        } catch (Exception e) {
+            logger.error("jcek Exception : " + e);
+        }
+        return getSecretsFromKV(keyVaultUrl, credMap, keymap.get("fs.adl.oauth2.client.id"), keymap.get("fs.adl.oauth2.credential"));
     }
-    return getSecretsFromKV(keyVaultUrl, credMap, keymap.get("fs.adl.oauth2.client.id"), keymap.get("fs.adl.oauth2.credential"));
-  }
 
-  public static HashMap<String, String> getSecretsFromKV(String vaultURI, HashMap<String, String> secretMap, String kvId, String kvSecret) {
+    public static HashMap<String, String> getSecretsFromKV(String vaultURI, HashMap<String, String> secretMap, String kvId, String kvSecret) {
 
-    /* Get keyVault client by providing authorized credentials as read from jceks */
-    KeyVaultClient client = new KeyVaultClient(new ClientSecretKeyVaultCredential(kvId, kvSecret));
+        /* Get keyVault client by providing authorized credentials as read from jceks */
+        KeyVaultClient client = new KeyVaultClient(new ClientSecretKeyVaultCredential(kvId, kvSecret));
 
-    /* Now, Replace value in secretMap with actual value fetched from keyVault */
-    for (String key : secretMap.keySet()) {
-      SecretBundle secret = client.getSecret(vaultURI, secretMap.get(key));
-      secretMap.put(key, secret.value());
+        /* Now, Replace value in secretMap with actual value fetched from keyVault */
+        for (String key : secretMap.keySet()) {
+            SecretBundle secret = client.getSecret(vaultURI, secretMap.get(key));
+            secretMap.put(key, secret.value());
+        }
+        return secretMap;
     }
-    return secretMap;
-  }
 
-  public static HashMap<String, String> getSecretsFromJcek(String csvKeys) throws IOException {
+    public static HashMap<String, String> getSecretsFromJcek(String csvKeys) throws IOException {
 
-    HashMap<String, String> keyPasses = new HashMap<String, String>();
-    String[] keys = csvKeys.split(",");
+        HashMap<String, String> keyPasses = new HashMap<String, String>();
+        String[] keys = csvKeys.split(",");
 
-    /* Fetch password from configured credential provider path */
-    Configuration c = new Configuration();
-    /* TODO: jceks file location hardcoded for now, it is to be replaced by some other strategy like either reading from
-     * core-site.xml or cdap environment, etc. Till this story is defined, we keep it hard-coded
-     */
-    c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,"jceks://hdfs@reflex-platform-raf003/cdap/ADLSCred.jceks");
-    CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
-    for (String key : keys) {
-      CredentialProvider.CredentialEntry entry = credentialProvider.getCredentialEntry(key);
-      if (entry == null) {
-        throw new IOException(String.format("No credential entry found for %s", key));
-      } else {
-        keyPasses.put(key, String.valueOf(entry.getCredential()));
-      }
+        /* Fetch password from configured credential provider path */
+        Configuration c = new Configuration();
+        /* TODO: jceks file location hardcoded for now, it is to be replaced by some other strategy like either reading from
+         * core-site.xml or cdap environment, etc. Till this story is defined, we keep it hard-coded
+         */
+        c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, "jceks://hdfs@mycluster/etc/security/jceks/adls.jceks");
+        CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
+        for (String key : keys) {
+            CredentialProvider.CredentialEntry entry = credentialProvider.getCredentialEntry(key);
+            if (entry == null) {
+                throw new IOException(String.format("No credential entry found for %s", key));
+            } else {
+                keyPasses.put(key, String.valueOf(entry.getCredential()));
+            }
+        }
+        return keyPasses;
     }
-    return keyPasses;
-  }
 
 }

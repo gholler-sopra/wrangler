@@ -25,25 +25,25 @@ import java.util.Map;
 
 
 public class ADLSConfiguration {
-    private static final List<String> CONFIG_FIELDS = ImmutableList.of("clientID", "clientSecret","refreshURL","accountFQDN");
-    private static final List<String> CONFIG_FIELDS_JCEKS = ImmutableList.of("kvURL","clientIDKey","clientSecretKey","endPointURLKey","accountFQDN");
+    private static final List<String> CONFIG_FIELDS = ImmutableList.of("clientID", "clientSecret", "refreshURL", "accountFQDN");
+    private static final List<String> CONFIG_FIELDS_JCEKS = ImmutableList.of("kvURL", "clientIDKey", "clientSecretKey", "endPointURLKey", "accountFQDN");
     private final String kvURL;
-    private String clientIDKey;
-    private String clientSecretKey;
-    private String endPointURLKey;
     private final String clientID;
     private final String clientSecret;
     private final String refreshURL;
     private final String accountFQDN;
+    private String clientIDKey;
+    private String clientSecretKey;
+    private String endPointURLKey;
 
-    ADLSConfiguration(Connection connection){
+    ADLSConfiguration(Connection connection) {
         Map<String, String> properties = connection.getAllProps();
 
         if (properties == null || properties.size() == 0) {
             throw new IllegalArgumentException("ADLS properties are not defined. Check connection setting.");
         }
 
-        if (properties.containsKey(CONFIG_FIELDS_JCEKS.get(0)) || properties.containsKey(CONFIG_FIELDS_JCEKS.get(1))){
+        if (properties.containsKey(CONFIG_FIELDS_JCEKS.get(0))) {
             for (String property : CONFIG_FIELDS_JCEKS) {
 
                 if (!properties.containsKey(property)) {
@@ -56,13 +56,13 @@ public class ADLSConfiguration {
             endPointURLKey = properties.get(CONFIG_FIELDS_JCEKS.get(3));
             accountFQDN = properties.get(CONFIG_FIELDS_JCEKS.get(4));
 
-            Map<String, String> credentials = AzureClientSecretService.getADLSSecretsUsingJceksAndKV(kvURL, getKvKeyNamesMap(clientIDKey,clientSecretKey,endPointURLKey));
+            Map<String, String> credentials = AzureClientSecretService.getADLSSecretsUsingJceksAndKV(kvURL, getKvKeyNamesMap(clientIDKey, clientSecretKey, endPointURLKey));
 
             this.refreshURL = credentials.get(endPointURLKey);
             this.clientID = credentials.get(clientIDKey);
             this.clientSecret = credentials.get(clientSecretKey);
 
-        } else if(properties.containsKey(CONFIG_FIELDS.get(0))){
+        } else if (properties.containsKey(CONFIG_FIELDS.get(0))) {
             for (String property : CONFIG_FIELDS) {
 
                 if (!properties.containsKey(property)) {
@@ -74,7 +74,7 @@ public class ADLSConfiguration {
             clientSecret = properties.get(CONFIG_FIELDS.get(1));
             refreshURL = properties.get(CONFIG_FIELDS.get(2));
             accountFQDN = properties.get(CONFIG_FIELDS.get(3));
-        } else{
+        } else {
             throw new IllegalArgumentException("Check configuration properties");
         }
 
@@ -82,9 +82,9 @@ public class ADLSConfiguration {
 
     public HashMap<String, String> getKvKeyNamesMap(String clientIDKey, String clientSecretKey, String endPointURLKey) {
         HashMap<String, String> credMap = new HashMap<String, String>();
-        credMap.put(clientIDKey,"clientId");
-        credMap.put(clientSecretKey,"clientSecret");
-        credMap.put(endPointURLKey,"endpointUrl");
+        credMap.put(clientIDKey, "clientId");
+        credMap.put(clientSecretKey, "clientSecret");
+        credMap.put(endPointURLKey, "endpointUrl");
         return credMap;
     }
 
@@ -92,11 +92,17 @@ public class ADLSConfiguration {
         return clientID;
     }
 
-    public String getClientIDKey(){ return clientIDKey;}
+    public String getClientIDKey() {
+        return clientIDKey;
+    }
 
-    public String getClientSecretKey(){return clientSecretKey;}
+    public String getClientSecretKey() {
+        return clientSecretKey;
+    }
 
-    public String getEndPointURLKey(){return endPointURLKey;}
+    public String getEndPointURLKey() {
+        return endPointURLKey;
+    }
 
     public String getClientKey() {
         return clientSecret;
@@ -106,7 +112,7 @@ public class ADLSConfiguration {
         return refreshURL;
     }
 
-    public String getAccountFQDN(){
+    public String getAccountFQDN() {
         return accountFQDN;
     }
 }
