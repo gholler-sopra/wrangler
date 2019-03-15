@@ -68,7 +68,9 @@ public class AzureClientSecretService {
         /* TODO: jceks file location hardcoded for now, it is to be replaced by some other strategy like either reading from
          * core-site.xml or cdap environment, etc. Till this story is defined, we keep it hard-coded
          */
-        c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, "jceks://hdfs@mycluster/etc/security/jceks/adls.jceks");
+        //jceks://hdfs@reflex-platform-raf004/tmp/adls.jceks
+        String jceksPath = ParseConf.buildJCEKSPath(ParseConf.getClusterName());
+        c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, jceksPath);
         CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
         for (String key : keys) {
             CredentialProvider.CredentialEntry entry = credentialProvider.getCredentialEntry(key);

@@ -58,9 +58,9 @@ public class ADLSConfiguration {
 
             Map<String, String> credentials = AzureClientSecretService.getADLSSecretsUsingJceksAndKV(kvURL, getKvKeyNamesMap(clientIDKey, clientSecretKey, endPointURLKey));
 
-            this.refreshURL = credentials.get(endPointURLKey);
-            this.clientID = credentials.get(clientIDKey);
-            this.clientSecret = credentials.get(clientSecretKey);
+            this.refreshURL = credentials.get("dfs.adls.oauth2.refresh.url");
+            this.clientID = credentials.get("fs.adl.oauth2.client.id");
+            this.clientSecret = credentials.get("fs.adl.oauth2.credential");
 
         } else if (properties.containsKey(CONFIG_FIELDS.get(0))) {
             for (String property : CONFIG_FIELDS) {
@@ -82,9 +82,9 @@ public class ADLSConfiguration {
 
     public HashMap<String, String> getKvKeyNamesMap(String clientIDKey, String clientSecretKey, String endPointURLKey) {
         HashMap<String, String> credMap = new HashMap<String, String>();
-        credMap.put(clientIDKey, "clientId");
-        credMap.put(clientSecretKey, "clientSecret");
-        credMap.put(endPointURLKey, "endpointUrl");
+        credMap.put("fs.adl.oauth2.client.id", clientIDKey);
+        credMap.put("fs.adl.oauth2.credential", clientSecretKey);
+        credMap.put("dfs.adls.oauth2.refresh.url", endPointURLKey);
         return credMap;
     }
 
