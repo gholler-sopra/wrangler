@@ -74,6 +74,22 @@ public class ADLSHandler extends AbstractWranglerService {
     private static final FileTypeDetector detector = new FileTypeDetector();
 
     /**
+     * Create an ADLS client using connection details from the HTTP request.
+     *
+     * @param connection connection details from the HTTP request.
+     * @return ADLStoreClient
+     */
+    public static ADLStoreClient initializeAndGetADLSClient(Connection connection) {
+        ADLSConfiguration ADLSConfiguration = new ADLSConfiguration(connection);
+        String authTokenEndpoint = ADLSConfiguration.getEndpointURL();
+        String clientId = ADLSConfiguration.getADLSClientId();
+        String clientKey = ADLSConfiguration.getClientKey();
+        String accountFQDN = ADLSConfiguration.getAccountFQDN();
+        AccessTokenProvider provider = new ClientCredsTokenProvider(authTokenEndpoint, clientId, clientKey);
+        return ADLStoreClient.createClient(accountFQDN, provider);
+    }
+
+    /**
      * Tests ADLS Connection.
      *
      * @param request   HTTP Request handler.
@@ -121,6 +137,7 @@ public class ADLSHandler extends AbstractWranglerService {
         return true;
     }
 
+    // Load files from ADLS into workspace
 
     /**
      * Lists ADLS directory's contents for the given prefix path.
@@ -149,7 +166,7 @@ public class ADLSHandler extends AbstractWranglerService {
             }
             JsonObject response;
             ADLStoreClient adlStoreClient = initializeAndGetADLSClient(connection[0]);
-            if(path==null || path.equals("")){
+            if (path == null || path.equals("")) {
                 path = defaultPath;
                 response = ADLSUtilityClass.initClientReturnResponse(adlStoreClient, path);
             } else {
@@ -160,8 +177,6 @@ public class ADLSHandler extends AbstractWranglerService {
             ServiceUtils.error(responder, e.getMessage());
         }
     }
-
-    // Load files from ADLS into workspace
 
     /**
      * Reads ADLS file into workspace
@@ -196,7 +211,7 @@ public class ADLSHandler extends AbstractWranglerService {
             if (!validateConnection(connectionId, connection, responder)) {
                 return;
             }
-            FileQueryDetails fileQueryDetails = new FileQueryDetails(header,filePath,lines,sampler,fraction,scope);
+            FileQueryDetails fileQueryDetails = new FileQueryDetails(header, filePath, lines, sampler, fraction, scope);
             fetchFileFromClient(connection, responder, fileQueryDetails);
         } catch (IOException | NumberFormatException e) {
             ServiceUtils.error(responder, e.getMessage());
@@ -205,24 +220,25 @@ public class ADLSHandler extends AbstractWranglerService {
 
     /**
      * A method to fetch a file from an ADLS client
-     * @param connection connection details from the HttpRequest.
-     * @param responder  HttpResponder on which the file data will be dumped.
+     *
+     * @param connection       connection details from the HttpRequest.
+     * @param responder        HttpResponder on which the file data will be dumped.
      * @param fileQueryDetails Utility class containing the query params of read file API.
      * @throws IOException
      */
     private void fetchFileFromClient(Connection connection, HttpServiceResponder responder, FileQueryDetails fileQueryDetails) throws IOException {
-            ADLStoreClient client = initializeAndGetADLSClient(connection);
-            DirectoryEntry file = ADLSUtilityClass.getFileFromClient(client,fileQueryDetails.getFilePath());
-            try (InputStream inputStream = ADLSUtilityClass.clientInputStream(client,fileQueryDetails)) {
-                if (fileQueryDetails.getHeader() != null && fileQueryDetails.getHeader().equalsIgnoreCase("text/plain")) {
-                    loadSamplableFile(connection.getId(), responder, fileQueryDetails.getScope(), inputStream, file, fileQueryDetails.getLines(), fileQueryDetails.getFraction(), fileQueryDetails.getSampler());
-                    return;
-                }
-                loadFile(connection.getId(), responder, inputStream, file);
-            } catch (ADLException e) {
-                ServiceUtils.error(responder, e.getMessage());
+        ADLStoreClient client = initializeAndGetADLSClient(connection);
+        DirectoryEntry file = ADLSUtilityClass.getFileFromClient(client, fileQueryDetails.getFilePath());
+        try (InputStream inputStream = ADLSUtilityClass.clientInputStream(client, fileQueryDetails)) {
+            if (fileQueryDetails.getHeader() != null && fileQueryDetails.getHeader().equalsIgnoreCase("text/plain")) {
+                loadSamplableFile(connection.getId(), responder, fileQueryDetails.getScope(), inputStream, file, fileQueryDetails.getLines(), fileQueryDetails.getFraction(), fileQueryDetails.getSampler());
+                return;
             }
+            loadFile(connection.getId(), responder, inputStream, file);
+        } catch (ADLException e) {
+            ServiceUtils.error(responder, e.getMessage());
         }
+    }
 
     private void loadSamplableFile(String connectionId, HttpServiceResponder responder,
                                    String scope, InputStream inputStream, DirectoryEntry fileEntry,
@@ -447,21 +463,6 @@ public class ADLSHandler extends AbstractWranglerService {
         String fileType = detector.detectFileType(fileName);
         DataType dataType = DataType.fromString(fileType);
         return dataType == null ? DataType.BINARY : dataType;
-    }
-
-    /**
-     * Create an ADLS client using connection details from the HTTP request.
-     * @param connection connection details from the HTTP request.
-     * @return ADLStoreClient
-     */
-    public static ADLStoreClient initializeAndGetADLSClient(Connection connection) {
-        ADLSConfiguration ADLSConfiguration = new ADLSConfiguration(connection);
-        String authTokenEndpoint = ADLSConfiguration.getEndpointURL();
-        String clientId = ADLSConfiguration.getADLSClientId();
-        String clientKey = ADLSConfiguration.getClientKey();
-        String accountFQDN = ADLSConfiguration.getAccountFQDN();
-        AccessTokenProvider provider = new ClientCredsTokenProvider(authTokenEndpoint, clientId, clientKey);
-        return ADLStoreClient.createClient(accountFQDN, provider);
     }
 
 

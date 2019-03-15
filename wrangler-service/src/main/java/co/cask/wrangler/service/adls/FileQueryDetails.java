@@ -24,7 +24,7 @@ public class FileQueryDetails {
     private String scope;
     private String header;
 
-    public FileQueryDetails(String header, String filePath,int lines,String sampler, double fraction, String scope){
+    public FileQueryDetails(String header, String filePath, int lines, String sampler, double fraction, String scope) {
         this.filePath = filePath;
         this.lines = lines;
         this.sampler = sampler;
@@ -37,7 +37,7 @@ public class FileQueryDetails {
         return filePath;
     }
 
-    public String getHeader(){
+    public String getHeader() {
         return header;
     }
 

@@ -30,7 +30,7 @@ public class ADLSUtilityClass {
     public static String testConnection(ADLStoreClient client) throws IOException {
         try {
             client.enumerateDirectory("/");
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new IOException("Connection Failed, please check given credentials : " + e.getMessage());
         }
         return "Success";
@@ -64,13 +64,13 @@ public class ADLSUtilityClass {
         return response;
     }
 
-    public static InputStream clientInputStream(ADLStoreClient client, FileQueryDetails fileQueryDetails) throws IOException{
+    public static InputStream clientInputStream(ADLStoreClient client, FileQueryDetails fileQueryDetails) throws IOException {
         DirectoryEntry file = client.getDirectoryEntry(fileQueryDetails.getFilePath());
         InputStream inputStream = client.getReadStream(file.fullName);
         return inputStream;
     }
 
-    public static DirectoryEntry getFileFromClient(ADLStoreClient client,String path) throws IOException{
+    public static DirectoryEntry getFileFromClient(ADLStoreClient client, String path) throws IOException {
         DirectoryEntry file = client.getDirectoryEntry(path);
         return file;
     }

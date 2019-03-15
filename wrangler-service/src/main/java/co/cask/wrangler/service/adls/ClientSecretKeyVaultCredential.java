@@ -29,21 +29,13 @@ import java.util.concurrent.Future;
  * Refer Microsoft documentation:
  * https://azure.github.io/azure-sdk-for-java/com/microsoft/azure/keyvault/authentication/KeyVaultCredentials.html
  */
-public class ClientSecretKeyVaultCredential extends KeyVaultCredentials
-{
+public class ClientSecretKeyVaultCredential extends KeyVaultCredentials {
     private String clientId;
     private String clientKey;
 
-    public ClientSecretKeyVaultCredential(String clientId, String clientKey ) {
+    public ClientSecretKeyVaultCredential(String clientId, String clientKey) {
         this.clientId = clientId;
         this.clientKey = clientKey;
-    }
-
-    @Override
-    public String doAuthenticate(String authorization, String resource, String scope) {
-        AuthenticationResult token = getAccessTokenFromClientCredentials(
-                authorization, resource, clientId, clientKey);
-        return token.getAccessToken();
     }
 
     private static AuthenticationResult getAccessTokenFromClientCredentials(
@@ -68,5 +60,12 @@ public class ClientSecretKeyVaultCredential extends KeyVaultCredentials
             throw new RuntimeException("authentication result was null");
         }
         return result;
+    }
+
+    @Override
+    public String doAuthenticate(String authorization, String resource, String scope) {
+        AuthenticationResult token = getAccessTokenFromClientCredentials(
+                authorization, resource, clientId, clientKey);
+        return token.getAccessToken();
     }
 }
