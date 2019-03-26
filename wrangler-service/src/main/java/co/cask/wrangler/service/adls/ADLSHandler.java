@@ -410,22 +410,18 @@ public class ADLSHandler extends AbstractWranglerService {
             properties.put("format", format.name().toLowerCase());
             Connection conn = store.get(connectionId);
             Map<String, String> connMap = conn.getAllProps();
-            String kvURL;
-            if (connMap.containsKey("kvURL")) {
-                kvURL = connMap.get("kvURL");
-            } else {
-                kvURL = "";
-            }
             ADLSConfiguration adlsConfiguration = new ADLSConfiguration(conn);
-            String kvKeyNames = String.format("%s:ClientId_KeyName,%s:ClientCredential_KeyName,%s:RefreshTokenUrl_KeyName", adlsConfiguration.getClientIDKey(), adlsConfiguration.getClientSecretKey(), adlsConfiguration.getEndPointURLKey());
-
+            if (connMap.containsKey("kvURL")) {
+                String kvURL = connMap.get("kvURL");
+                String kvKeyNames = String.format("%s:ClientId_KeyName,%s:ClientCredential_KeyName,%s:RefreshTokenUrl_KeyName", adlsConfiguration.getClientIDKey(), adlsConfiguration.getClientSecretKey(), adlsConfiguration.getEndPointURLKey());
+                properties.put("keyVaultUrl", kvURL);
+                properties.put("kvKeyNames", kvKeyNames);
+            }
             JsonObject value = new JsonObject();
             JsonObject adls = new JsonObject();
             String pathURI = "adl://" + adlsConfiguration.getAccountFQDN() + path;
             properties.put("path", pathURI);
             properties.put("referenceName", refName);
-            properties.put("keyVaultUrl", kvURL);
-            properties.put("kvKeyNames", kvKeyNames);
             properties.put("credentials", adlsConfiguration.getClientKey());
             properties.put("clientId", adlsConfiguration.getADLSClientId());
             properties.put("refreshTokenURL", adlsConfiguration.getEndpointURL());
