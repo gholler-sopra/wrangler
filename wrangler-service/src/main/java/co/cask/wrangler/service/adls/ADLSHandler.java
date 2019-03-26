@@ -417,7 +417,7 @@ public class ADLSHandler extends AbstractWranglerService {
                 kvURL = "";
             }
             ADLSConfiguration adlsConfiguration = new ADLSConfiguration(conn);
-            String kvKeyNames = String.format("clientId:%s,clientSecret:%s,endpointUrl:%s", adlsConfiguration.getClientIDKey(), adlsConfiguration.getClientSecretKey(), adlsConfiguration.getEndPointURLKey());
+            String kvKeyNames = String.format("%s:ClientId_KeyName,%s:ClientCredential_KeyName,%s:RefreshTokenUrl_KeyName", adlsConfiguration.getClientIDKey(), adlsConfiguration.getClientSecretKey(), adlsConfiguration.getEndPointURLKey());
 
             JsonObject value = new JsonObject();
             JsonObject adls = new JsonObject();
