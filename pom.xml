@@ -302,7 +302,7 @@
             </configuration>
           </plugin>
 
-          <plugin>
+          <!--<plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>nexus-staging-maven-plugin</artifactId>
             <version>1.6.2</version>
@@ -312,7 +312,7 @@
               <serverId>sonatype.release</serverId>
               <stagingProfileId>655dc88dc770c3</stagingProfileId>
             </configuration>
-          </plugin>
+          </plugin>-->
         </plugins>
       </build>
     </profile>
