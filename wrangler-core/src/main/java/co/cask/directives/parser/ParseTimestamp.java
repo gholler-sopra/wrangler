@@ -34,10 +34,13 @@ import co.cask.wrangler.api.parser.TokenType;
 import co.cask.wrangler.api.parser.UsageDefinition;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -52,15 +55,19 @@ import java.util.concurrent.TimeUnit;
 public class ParseTimestamp implements Directive {
   public static final String NAME = "parse-timestamp";
   private static final Set<TimeUnit> SUPPORTED_TIME_UNITS = EnumSet.of(TimeUnit.SECONDS, TimeUnit.MILLISECONDS,
-                                                                       TimeUnit.MICROSECONDS);
+                                                                       TimeUnit.MICROSECONDS, TimeUnit.DAYS);
+  private static final Set<String> SUPPORTED_TYPES = new HashSet<String>(
+                                    Arrays.asList("TIMESTAMP", "DATE"));
   private String column;
   private TimeUnit timeUnit;
+  private boolean type = false;
 
   @Override
   public UsageDefinition define() {
     UsageDefinition.Builder builder = UsageDefinition.builder(NAME);
     builder.define("column", TokenType.COLUMN_NAME);
     builder.define("timeunit", TokenType.TEXT, Optional.TRUE);
+    builder.define("type", TokenType.TEXT, Optional.TRUE);
     return builder.build();
   }
 
@@ -72,6 +79,10 @@ public class ParseTimestamp implements Directive {
     if (args.contains("timeunit")) {
       String unitValue = ((Text) args.value("timeunit")).value();
       this.timeUnit = getTimeUnit(unitValue);
+    }
+    if (args.contains("type")) {
+      String typeValue = ((Text) args.value("type")).value();
+      this.type = getType(typeValue);
     }
   }
 
@@ -96,6 +107,10 @@ public class ParseTimestamp implements Directive {
         long longValue = getLongValue(object);
         ZonedDateTime zonedDateTime = getZonedDateTime(longValue, timeUnit, ZoneId.ofOffset("UTC", ZoneOffset.UTC));
         row.setValue(idx, zonedDateTime);
+        if (type) {
+          LocalDate lDate = zonedDateTime.toLocalDate();
+          row.setValue(idx, lDate);
+        }
       }
     }
     return rows;
@@ -119,6 +134,17 @@ public class ParseTimestamp implements Directive {
     return unit;
   }
 
+  private static boolean getType(String typeValue) throws DirectiveParseException {
+    if (!SUPPORTED_TYPES.contains(typeValue.toUpperCase())) {
+      throw new DirectiveParseException(String.format("'%s' is not a supported type. Supported types " +
+                                                        "are %s", typeValue, SUPPORTED_TYPES));
+    }
+    if (typeValue.toUpperCase().equals("DATE")) {
+      return true;
+    }
+    return false;
+  }
+
   private long getLongValue(Object object) throws ErrorRowException {
     String errorMsg = String.format("%s : Invalid type '%s' of column '%s'. Must be of type Long or String.",
                                     toString(), object.getClass().getName(), column);
@@ -139,8 +165,13 @@ public class ParseTimestamp implements Directive {
 
   private ZonedDateTime getZonedDateTime(long ts, TimeUnit unit, ZoneId zoneId) {
     long mod = unit.convert(1, TimeUnit.SECONDS);
-    int fraction = (int) (ts % mod);
+    int fraction;
     long tsInSeconds = unit.toSeconds(ts);
+    if (unit.name().equals("DAYS")) {
+      fraction = 0;
+    } else {
+      fraction = (int) (ts % mod);
+    }
     // create an Instant with time in seconds and fraction which will be stored as nano seconds.
     Instant instant = Instant.ofEpochSecond(tsInSeconds, unit.toNanos(fraction));
     return ZonedDateTime.ofInstant(instant, zoneId);

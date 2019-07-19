@@ -25,6 +25,7 @@ import co.cask.wrangler.api.DirectiveExecutionException;
 import co.cask.wrangler.api.DirectiveParseException;
 import co.cask.wrangler.api.ErrorRowException;
 import co.cask.wrangler.api.ExecutorContext;
+import co.cask.wrangler.api.Optional;
 import co.cask.wrangler.api.Row;
 import co.cask.wrangler.api.annotations.Categories;
 import co.cask.wrangler.api.parser.ColumnName;
@@ -34,30 +35,40 @@ import co.cask.wrangler.api.parser.UsageDefinition;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 
 /**
- * A Executor to parse date into {@link ZonedDateTime} object.
+ * A Executor to parse date into {@link ZonedDateTime} or {@link LocalDate} object.
  */
 @Plugin(type = Directive.Type)
 @Name("parse-as-simple-date")
 @Categories(categories = { "parser", "date"})
-@Description("Parses a column as date using format.")
+@Description("Parses a column as timestamp or date using format.")
+
 public class ParseSimpleDate implements Directive {
   public static final String NAME = "parse-as-simple-date";
   private String column;
   private SimpleDateFormat formatter;
+  private boolean type = false;
+
+  private static final Set<String> SUPPORTED_TYPES = new HashSet<String>(
+                                    Arrays.asList("TIMESTAMP", "DATE"));
 
   @Override
   public UsageDefinition define() {
     UsageDefinition.Builder builder = UsageDefinition.builder(NAME);
     builder.define("column", TokenType.COLUMN_NAME);
     builder.define("format", TokenType.TEXT);
+    builder.define("type", TokenType.TEXT, Optional.TRUE);
     return builder.build();
   }
 
@@ -67,6 +78,11 @@ public class ParseSimpleDate implements Directive {
     String format = ((Text) args.value("format")).value();
     this.formatter = new SimpleDateFormat(format);
     formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+    if (args.contains("type")) {
+      String typeValue = ((Text) args.value("type")).value();
+      this.type = getType(typeValue);
+    }
   }
 
   @Override
@@ -96,6 +112,10 @@ public class ParseSimpleDate implements Directive {
             ZonedDateTime zonedDateTime = ZonedDateTime.from(date.toInstant()
                                                                .atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
             row.setValue(idx, zonedDateTime);
+            if (type) {
+              LocalDate lDate = zonedDateTime.toLocalDate();
+              row.setValue(idx, lDate);
+            }
           } catch (ParseException e) {
             throw new ErrorRowException(String.format("Failed to parse '%s' with pattern '%s'",
                                                       object, formatter.toPattern()), 1);
@@ -109,5 +129,16 @@ public class ParseSimpleDate implements Directive {
       }
     }
     return rows;
+  }
+
+  private static boolean getType(String typeValue) throws DirectiveParseException {
+    if (!SUPPORTED_TYPES.contains(typeValue.toUpperCase())) {
+      throw new DirectiveParseException(String.format("'%s' is not a supported type. Supported types " +
+                                                        "are %s", typeValue, SUPPORTED_TYPES));
+    }
+    if (typeValue.toUpperCase().equals("DATE")) {
+      return true;
+    }
+    return false;
   }
 }

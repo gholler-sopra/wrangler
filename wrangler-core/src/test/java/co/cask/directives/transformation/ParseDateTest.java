@@ -18,6 +18,7 @@ package co.cask.directives.transformation;
 
 import co.cask.directives.parser.ParseDate;
 import co.cask.wrangler.TestingRig;
+import co.cask.wrangler.api.RecipePipeline;
 import co.cask.wrangler.api.Row;
 import org.junit.Assert;
 import org.junit.Test;
@@ -84,7 +85,7 @@ public class ParseDateTest {
       "parse-as-simple-date date12 EEE, MMM d, ''yy",
       "parse-as-simple-date date13 h:mm a",
       "parse-as-simple-date date14 K:mm a, z",
-      "parse-as-simple-date date15 yyyy.MM.dd G 'at' HH:mm:ss z",
+      "parse-as-simple-date date15 yyyy.MM.dd G 'at' HH:mm:ss z"
     };
 
     Row row1 = new Row();
@@ -262,4 +263,97 @@ public class ParseDateTest {
     Assert.assertEquals("Sat, Dec 10, '16", rows.get(0).getValue("date12"));
     Assert.assertEquals("2016.12.10 AD at 14:45:11 UTC", rows.get(0).getValue("date15"));
   }
+
+  @Test
+  public void testSimpleDateParserWithTypeDate() throws Exception {
+    String[] directives = new String[] {
+      "parse-as-simple-date :date1 'yyyy-MM-dd' 'date'"
+    };
+
+    Row row1 = new Row();
+    row1.add("date1", "2016-10-12");
+
+    Row row2 = new Row();
+    row2.add("date1", "1990-01-01");
+
+    Row row3 = new Row();
+    row3.add("date1", "1998-03-03");
+
+    List<Row> rows = TestingRig.execute(directives, Arrays.asList(row1, row2, row3));
+
+    LocalDate localDate1 = LocalDate.of(2016, 10, 12);
+    LocalDate localDate2 = LocalDate.of(1990, 01, 01);
+    LocalDate localDate3 = LocalDate.of(1998, 03, 03);
+
+    Assert.assertEquals(localDate1, rows.get(0).getValue("date1"));
+    Assert.assertEquals(localDate2, rows.get(1).getValue("date1"));
+    Assert.assertEquals(localDate3, rows.get(2).getValue("date1"));
+    Assert.assertTrue(rows.size() == 3);
+  }
+
+  /*
+  @Test
+  public void testSimpleDateWithPatternsWithTypeDate() throws Exception {
+    String[] directives = new String[] {
+      "parse-as-simple-date :date1 'MM/dd/yyyy' 'date'",
+      "parse-as-simple-date :date2 'dd/MM/yyyy' 'date'",
+      "parse-as-simple-date :date3 'MM-dd-yyyy' 'date'",
+      "parse-as-simple-date :date4 'MM-dd-yy' 'date'",
+      "parse-as-simple-date :date5 \"yyyy-MM-dd\" 'date'",
+      "parse-as-simple-date :date6 \"yyyy-MM-dd HH:mm:ss\" 'date'",
+      "parse-as-simple-date :date7 \"MM-dd-yyyy 'at' HH:mm:ss z\" 'date'",
+      "parse-as-simple-date :date8 \"dd/MM/yy HH:mm:ss\" 'date'",
+      "parse-as-simple-date :date9 \"yyyy,MM.dd'T'HH:mm:ss.SSSZ\" 'date'",
+      "parse-as-simple-date :date10 \"MM.dd.yyyy HH:mm:ss.SSS\" 'date'",
+      "parse-as-simple-date :date11 \"EEE, d MMM yyyy HH:mm:ss\" 'date'",
+      "parse-as-simple-date :date12 \"EEE, MMM d, ''yy\" 'date'",
+      "parse-as-simple-date :date13 \"yyyy.MM.dd G 'at' HH:mm:ss z\" 'date'"
+    };
+
+    Row row1 = new Row();
+    // MM/dd/yyyy
+    row1.add("date1", "12/10/2016");
+    // dd/MM/yyyy
+    row1.add("date2", "10/12/2016");
+    // MM-dd-yyyy
+    row1.add("date3", "12-10-2016");
+    // MM-dd-yy
+    row1.add("date4", "12-10-16");
+    // yyyy-MM-dd
+    row1.add("date5", "2016-12-10");
+    // yyyy-MM-dd HH:mm:ss
+    row1.add("date6", "2016-12-10 06:45:11");
+    // MM-dd-yyyy 'at' HH:mm:ss with timezone
+    row1.add("date7", "12-10-2016 at 06:45:11 PST");
+    // dd/MM/yy HH:mm:ss
+    row1.add("date8", "10/12/2016 06:45:11");
+    // yyyy,MM.dd'T'HH:mm:ss.SSS with RFC timezone
+    row1.add("date9", "2016,12.10T06:45:11.111-0800");
+    // MM.dd.yyyy HH:mm:ss.SSS
+    row1.add("date10", "12.10.2016 06:45:11.111");
+    // EEE, d MMM yyyy HH:mm:ss
+    row1.add("date11", "Sat, 10 Dec 2016 06:45:11");
+    // EEE, MMM d, 'yy
+    row1.add("date12", "Sat, Dec 10, '16");
+    // Custom - yyyy.MM.dd G 'at' HH:mm:ss z
+    row1.add("date13", "2016.12.10 AD at 06:45:11 PST");
+
+    List<Row> rows = TestingRig.execute(directives, Arrays.asList(row1));
+
+    LocalDate localDate = LocalDate.of(2016, 12, 10);
+
+    Assert.assertEquals(localDate, rows.get(0).getValue("date1"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date2"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date3"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date4"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date5"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date6"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date7"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date8"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date9"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date10"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date11"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date12"));
+    Assert.assertEquals(localDate, rows.get(0).getValue("date13"));
+  }*/
 }
