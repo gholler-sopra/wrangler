@@ -58,7 +58,7 @@
     <tag>HEAD</tag>
   </scm>
 
-  <distributionManagement>
+  <!--distributionManagement>
            <repository>
                <id>central</id>
                <url>http://artifacts.ggn.in.guavus.com:80/libs-release-local</url>
@@ -67,7 +67,7 @@
                <id>snapshots</id>
                <url>http://artifacts.ggn.in.guavus.com:8081/artifactory/libs-snapshot-local</url>
            </snapshotRepository>
-  </distributionManagement>
+  </distributionManagement-->
 
   <issueManagement>
     <url>https://issues.cask.co/browse/CDAP</url>
@@ -106,7 +106,8 @@
     <kafka.clients.version>0.10.2.1</kafka.clients.version>
     <aws.sdk.version>1.11.133</aws.sdk.version>
     <poi.version>3.16</poi.version>
-    <hadoop.version>2.4.0</hadoop.version>
+    <!--hadoop.version>2.4.0</hadoop.version-->
+    <hadoop.version>3.1.1.3.1.0.0-78</hadoop.version>
     <antlr4.version>4.7</antlr4.version>
     <antlr4-maven-plugin.version>4.7</antlr4-maven-plugin.version>
     <junit.version>4.12</junit.version>
