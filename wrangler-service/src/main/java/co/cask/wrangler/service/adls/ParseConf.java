@@ -28,7 +28,16 @@ public class ParseConf {
     public static String getClusterName() throws IOException {
         Configuration conf = new Configuration();
         String clusterName = conf.get("dfs.nameservices");
-        if(clusterName == null || clusterName.isEmpty()){
+        if ((clusterName != null) && (!(clusterName.isEmpty()))) {
+            return clusterName;
+        } else {
+            String defaultFs = conf.get("fs.defaultFS");
+            if (defaultFs.startsWith("hdfs://")) {
+                int idx = "hdfs://".length();
+                clusterName = defaultFs.substring(idx);
+            }
+        }
+        if(clusterName == null || clusterName.isEmpty()) {
             throw new IOException("issue with hdfs-site.xml");
         }
         return clusterName;
