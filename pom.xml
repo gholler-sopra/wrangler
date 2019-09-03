@@ -30,7 +30,7 @@
     <module>wrangler-service</module>
     <module>wrangler-core</module>
     <module>wrangler-api</module>
-    <module>wrangler-test</module>
+    <!--<module>wrangler-test</module>-->
   </modules>
 
   <licenses>

@@ -50,7 +50,7 @@
       <artifactId>jcl-over-slf4j</artifactId>
       <version>${slf4j.version}</version>
     </dependency>
-    <dependency>
+    <!--<dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>hydrator-test</artifactId>
       <version>${cdap.version}</version>
@@ -71,7 +71,7 @@
           <artifactId>cdap-explore-jdbc</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
+    </dependency>-->
   </dependencies>
 
   <build>
