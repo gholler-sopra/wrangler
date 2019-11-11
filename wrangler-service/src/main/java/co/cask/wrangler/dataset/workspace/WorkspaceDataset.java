@@ -197,7 +197,7 @@ public class WorkspaceDataset extends AbstractDataset {
         }
         byte[] scopeBytes = row.get(SCOPE_COL);
         String scopeStr = Bytes.toString(scopeBytes);
-        if (!scopeStr.equalsIgnoreCase(scope)) {
+        if (scopeStr == null || !scopeStr.equalsIgnoreCase(scope)) {
           continue;
         }
         byte[] name = row.get(NAME_COL);
