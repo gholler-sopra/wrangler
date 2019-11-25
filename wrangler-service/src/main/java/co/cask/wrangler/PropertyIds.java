@@ -64,4 +64,17 @@ public final class PropertyIds {
   public static final String VALUE_DESERIALIZER = "value.deserializer";
 
   public static final String PLUGIN_SPECIFICATION = "plugin.specification";
+  
+  // Key tab pricipal to be used
+  public static final String PRINCIPAL = "principal";
+  
+  // Location of tab file
+  public static final String KEYTAB_LOCATION = "keytabLocation";
+  
+  // Properties to be passed in kafka source plugin
+  public static final String KAFKA_PROPERTIES = "kafkaProperties";
+  
+  // extra Kafka properties passed by user
+  public static final String KAFAK_PRODUCER_PROPERTIES = "kafkaProducerProperties";
+  
 }

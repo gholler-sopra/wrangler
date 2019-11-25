@@ -36,12 +36,16 @@ import co.cask.wrangler.dataset.workspace.DataType;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.utils.ObjectSerDe;
+
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -49,11 +53,13 @@ import org.apache.kafka.common.PartitionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -280,16 +286,24 @@ public final class KafkaService extends AbstractHttpServiceHandler {
       JsonObject kafka = new JsonObject();
 
       Map<String, String> properties = new HashMap<>();
-      properties.put("topic", topic);
+      properties.put(PropertyIds.TOPIC, topic);
       properties.put("referenceName", topic);
       properties.put("brokers", conn.getProp(PropertyIds.BROKER));
       properties.put("kafkaBrokers", conn.getProp(PropertyIds.BROKER));
       properties.put("keyField", conn.getProp(PropertyIds.KEY_DESERIALIZER));
-      properties.put("format", "text");
+      properties.put(PropertyIds.FORMAT, "text");
+      properties.put(PropertyIds.KEYTAB_LOCATION, conn.getProp(PropertyIds.KEYTAB_LOCATION));
+      properties.put(PropertyIds.PRINCIPAL, conn.getProp(PropertyIds.PRINCIPAL));
 
-      kafka.add("properties", gson.toJsonTree(properties));
-      kafka.addProperty("name", "Kafka");
+      if (conn.getAllProps().containsKey(PropertyIds.KAFAK_PRODUCER_PROPERTIES)) {
+    	  Type type = new TypeToken<HashMap<String, String>>(){}.getType();
+    	  Map<String, String> kafkaProducerProperties = gson.fromJson(conn.getAllProps().get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
+    	  properties.put(PropertyIds.KAFKA_PROPERTIES, Joiner.on(",").withKeyValueSeparator(":").join(kafkaProducerProperties));
+      }
+      
+      kafka.addProperty(PropertyIds.NAME, "Kafka");
       kafka.addProperty("type", "source");
+      kafka.add("properties", gson.toJsonTree(properties));
       value.add("Kafka", kafka);
 
       JsonArray values = new JsonArray();
@@ -303,4 +317,5 @@ public final class KafkaService extends AbstractHttpServiceHandler {
       error(responder, e.getMessage());
     }
   }
+  
 }
