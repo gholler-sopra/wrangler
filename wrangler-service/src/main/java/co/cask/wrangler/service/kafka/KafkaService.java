@@ -56,6 +56,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   private static final Logger LOG = LoggerFactory.getLogger(KafkaService.class);
   private static final Gson gson =
     new GsonBuilder().registerTypeAdapter(Schema.class, new SchemaTypeAdapter()).create();
+  private Map<String, String> runtimeArgs;
 
   @UseDataSet(WORKSPACE_DATASET)
   private WorkspaceDataset ws;
@@ -97,6 +100,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
     super.initialize(context);
+    runtimeArgs = context.getRuntimeArguments();
     store = new ConnectionStore(table);
   }
 
@@ -126,7 +130,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
         return;
       }
 
-      KafkaConfiguration config = new KafkaConfiguration(connection);
+      KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
       Properties props = config.get();
 
       // Checks connection by extracting topics.
@@ -158,7 +162,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
         return;
       }
 
-      KafkaConfiguration config = new KafkaConfiguration(connection);
+      KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
       Properties props = config.get();
 
       // Extract topics from Kafka.
@@ -207,7 +211,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
         scope = WorkspaceDataset.DEFAULT_SCOPE;
       }
 
-      KafkaConfiguration config = new KafkaConfiguration(connection);
+      KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
       KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config.get());
       consumer.subscribe(Lists.newArrayList(topic));
       String uuid = ServiceUtils.generateMD5(String.format("%s:%s.%s", scope, id, topic));
@@ -280,6 +284,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   public void specification(HttpServiceRequest request, final HttpServiceResponder responder,
                             @PathParam("id") String id, @PathParam("topic") final String topic) {
     JsonObject response = new JsonObject();
+    String format = "text";
     try {
       Connection conn = store.get(id);
       JsonObject value = new JsonObject();
@@ -291,16 +296,25 @@ public final class KafkaService extends AbstractHttpServiceHandler {
       properties.put("brokers", conn.getProp(PropertyIds.BROKER));
       properties.put("kafkaBrokers", conn.getProp(PropertyIds.BROKER));
       properties.put("keyField", conn.getProp(PropertyIds.KEY_DESERIALIZER));
-      properties.put(PropertyIds.FORMAT, "text");
-      properties.put(PropertyIds.KEYTAB_LOCATION, conn.getProp(PropertyIds.KEYTAB_LOCATION));
-      properties.put(PropertyIds.PRINCIPAL, conn.getProp(PropertyIds.PRINCIPAL));
+      String keytabLocation = conn.getAllProps().getOrDefault(PropertyIds.KEYTAB_LOCATION, runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH));
+      String principal = conn.getAllProps().getOrDefault(PropertyIds.PRINCIPAL, runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME));
+      if (keytabLocation != null && principal != null) {
+    	  properties.put(PropertyIds.KEYTAB_LOCATION, keytabLocation);
+    	  properties.put(PropertyIds.PRINCIPAL, principal);
+      }
 
       if (conn.getAllProps().containsKey(PropertyIds.KAFAK_PRODUCER_PROPERTIES)) {
     	  Type type = new TypeToken<HashMap<String, String>>(){}.getType();
     	  Map<String, String> kafkaProducerProperties = gson.fromJson(conn.getAllProps().get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
     	  properties.put(PropertyIds.KAFKA_PROPERTIES, Joiner.on(",").withKeyValueSeparator(":").join(kafkaProducerProperties));
+    	  
+    	  if (kafkaProducerProperties.containsKey(PropertyIds.FORMAT) && Arrays.asList("text", "tsv", "binary", "avro", "csv").contains(kafkaProducerProperties.get(PropertyIds.FORMAT))) {
+    		  format = kafkaProducerProperties.get(PropertyIds.FORMAT);
+    	  }
+    	  
       }
       
+      properties.put(PropertyIds.FORMAT, format);
       kafka.addProperty(PropertyIds.NAME, "Kafka");
       kafka.addProperty("type", "source");
       kafka.add("properties", gson.toJsonTree(properties));

@@ -58,9 +58,7 @@ public final class KafkaConfiguration {
   private String autoOffsetReset;
   private String excludeInternalTopic;
   
-  public KafkaConfiguration(Connection conn) {
-    keyDeserializer = StringDeserializer.class.getName();
-    valueDeserializer = keyDeserializer;
+  public KafkaConfiguration(Connection conn, Map<String, String> runtimeArgs) {
     excludeInternalTopic = "true";
     
     if (conn.getType() != ConnectionType.KAFKA) {
@@ -80,47 +78,26 @@ public final class KafkaConfiguration {
       throw new IllegalArgumentException("Kafka Brokers not defined.");
     }
 
-    String requestTimeoutMs = properties.get(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG);
-    // default the request timeout to 15 seconds, to avoid hanging for minutes
-    if (requestTimeoutMs == null) {
-      requestTimeoutMs = "15000";
-    }
-    
-    
     Map<String, String> kafkaProducerProperties = new HashMap<>();
     if (properties.containsKey(PropertyIds.KAFAK_PRODUCER_PROPERTIES)) {
     	Type type = new TypeToken<HashMap<String, String>>(){}.getType();
     	kafkaProducerProperties = gson.fromJson(properties.get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
     }
     
-    autoOffsetReset = kafkaProducerProperties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG);
-    if (autoOffsetReset == null) {
-    	autoOffsetReset = "earliest";
-    }
-    
-    if (kafkaProducerProperties.containsKey(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG)) {
-        keyDeserializer = kafkaProducerProperties.get(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG);
-    }
-
-    if (kafkaProducerProperties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
-        valueDeserializer = kafkaProducerProperties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG);
-    }
-    
-    if (kafkaProducerProperties.containsKey(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG)) {
-        excludeInternalTopic = kafkaProducerProperties.get(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG);
-    }
+    keyDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+    valueDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
     
     props = new Properties();
     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, connection);
     props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
-    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
+    props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"));
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer);
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
-    props.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, excludeInternalTopic);
-    props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeoutMs);
+    props.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "true"));
+    props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "15000"));
     
-    String keytabLocation = properties.get(PropertyIds.KEYTAB_LOCATION);
-    String principal = properties.get(PropertyIds.PRINCIPAL);
+    String keytabLocation = properties.getOrDefault(PropertyIds.KEYTAB_LOCATION, runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH));
+    String principal = properties.getOrDefault(PropertyIds.PRINCIPAL, runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME));
 
 	//Kerberized environment, need to pass kerberos params
     if(keytabLocation != null && !"".equals(keytabLocation) && principal != null && !"".equals(principal)) {
@@ -147,7 +124,7 @@ public final class KafkaConfiguration {
 				keytabLocation, principal));
 	}
 	
-	props.forEach((k,v)->LOG.info("Item : {}, Value :  {}", k, v));
+	props.forEach((k,v)->LOG.debug("Item : {}, Value :  {}", k, v));
   }
   
   /**

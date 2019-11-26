@@ -77,4 +77,9 @@ public final class PropertyIds {
   // extra Kafka properties passed by user
   public static final String KAFAK_PRODUCER_PROPERTIES = "kafkaProducerProperties";
   
+  // Namespace reference keytab file location
+  public static final String NAMESPACE_KETAB_PATH = "pipeline.keytab.path";
+  
+  // Namespace reference principal
+  public static final String NAMESPACE_PRINCIPAL_NAME = "pipeline.principal.name";
 }
