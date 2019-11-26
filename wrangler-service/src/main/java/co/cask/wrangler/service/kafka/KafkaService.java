@@ -308,8 +308,8 @@ public final class KafkaService extends AbstractHttpServiceHandler {
     	  Map<String, String> kafkaProducerProperties = gson.fromJson(conn.getAllProps().get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
     	  properties.put(PropertyIds.KAFKA_PROPERTIES, Joiner.on(",").withKeyValueSeparator(":").join(kafkaProducerProperties));
     	  
-    	  if (kafkaProducerProperties.containsKey(PropertyIds.FORMAT) && Arrays.asList("text", "tsv", "binary", "avro", "csv").contains(kafkaProducerProperties.get(PropertyIds.FORMAT))) {
-    		  format = kafkaProducerProperties.get(PropertyIds.FORMAT);
+    	  if (kafkaProducerProperties.containsKey(PropertyIds.FORMAT) && Arrays.asList("text", "tsv", "binary", "avro", "csv").contains(kafkaProducerProperties.get(PropertyIds.FORMAT).toLowerCase())) {
+    		  format = kafkaProducerProperties.get(PropertyIds.FORMAT).toLowerCase();
     	  }
     	  
       }
