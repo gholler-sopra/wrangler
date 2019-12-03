@@ -31,6 +31,7 @@ import co.cask.wrangler.service.database.DatabaseService;
 import co.cask.wrangler.service.directive.DirectivesService;
 import co.cask.wrangler.service.explorer.FilesystemExplorer;
 import co.cask.wrangler.service.gcs.GCSService;
+import co.cask.wrangler.service.hiveserver2.Hiveserver2Service;
 import co.cask.wrangler.service.kafka.KafkaService;
 import co.cask.wrangler.service.recipe.RecipeService;
 import co.cask.wrangler.service.s3.S3Service;
@@ -94,7 +95,8 @@ public class DataPrep extends AbstractApplication<ConnectionTypeConfig> {
                new GCSService(),
                new BigQueryService(),
                new SpannerService(),
-               new ADLSHandler()
+               new ADLSHandler(),
+              new Hiveserver2Service()
     );
   }
 }
