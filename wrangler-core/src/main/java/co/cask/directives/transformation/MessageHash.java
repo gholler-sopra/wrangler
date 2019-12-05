@@ -43,7 +43,7 @@ import java.util.Set;
 /**
  * A Executor to generate a message digest or hash of a column value. .
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(MessageHash.NAME)
 @Categories(categories = { "transform", "hash"})
 @Description("Creates a message digest for the column using algorithm, replacing the column value.")

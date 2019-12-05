@@ -42,7 +42,7 @@ import java.util.List;
 /**
  * A Wrangler step for quantizing a column.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(Quantization.NAME)
 @Categories(categories = { "transform"})
 @Description("Quanitize the range of numbers into label values.")

@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * A Executor for parsing Apache HTTPD and NGINX log files.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name("parse-as-log")
 @Categories(categories = { "parser", "logs"})
 @Description("Parses Apache HTTPD and NGINX logs.")

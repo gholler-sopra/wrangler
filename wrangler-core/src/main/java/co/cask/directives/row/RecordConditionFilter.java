@@ -49,7 +49,7 @@ import java.util.Set;
  *   false, then the row will be accepted.
  * </p>
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(RecordConditionFilter.NAME)
 @Categories(categories = { "row", "data-quality"})
 @Description("Filters rows based on condition type specified.")
