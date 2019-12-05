@@ -36,6 +36,7 @@ import co.cask.wrangler.sampling.Poisson;
 import co.cask.wrangler.sampling.Reservoir;
 import co.cask.wrangler.service.common.AbstractWranglerService;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.utils.ObjectSerDe;
 import com.google.common.base.Charsets;
@@ -63,6 +64,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.service.common.Constants.*;
 
 /**
  * A {@link FilesystemExplorer} is a HTTP Service handler for exploring the filesystem.
@@ -123,21 +125,19 @@ public class FilesystemExplorer extends AbstractWranglerService {
       return;
     }
 
-    if (scope == null || scope.isEmpty()) {
-      scope = WorkspaceDataset.DEFAULT_SCOPE;
-    }
+    String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
     if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
-      loadSamplableFile(responder, scope, path, lines, fraction, sampler);
+      loadSamplableFile(responder, group, path, lines, fraction, sampler);
     } else if (header.equalsIgnoreCase("application/xml")) {
-      loadFile(responder, scope, path, DataType.RECORDS);
+      loadFile(responder, group, path, DataType.RECORDS);
     } else if (header.equalsIgnoreCase("application/json")) {
-      loadFile(responder, scope, path, DataType.TEXT);
+      loadFile(responder, group, path, DataType.TEXT);
     } else if (header.equalsIgnoreCase("application/avro")
       || header.equalsIgnoreCase("application/protobuf")
       || header.equalsIgnoreCase("application/excel")
       || header.contains("image/")) {
-      loadFile(responder, scope, path, DataType.BINARY);
+      loadFile(responder, group, path, DataType.BINARY);
     } else {
       error(responder, "Currently doesn't support wrangling of this type of file.");
     }

@@ -31,11 +31,11 @@
  import co.cask.wrangler.dataset.connections.ConnectionStore;
  import co.cask.wrangler.dataset.workspace.DataType;
  import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
+ import co.cask.wrangler.service.common.WorkspaceUtils;
  import co.cask.wrangler.service.connections.ConnectionType;
  import co.cask.wrangler.utils.ObjectSerDe;
 
  import com.google.common.annotations.VisibleForTesting;
- import com.google.common.base.Strings;
  import com.google.gson.*;
 
  import org.mortbay.log.Log;
@@ -64,21 +64,14 @@
  import org.apache.hadoop.hive.shims.Utils;
  import org.apache.hive.service.auth.HiveAuthFactory;
 
+ import static co.cask.wrangler.service.common.Constants.*;
+
  /**
   * Class description here.
   */
  public class Hiveserver2Service extends AbstractHttpServiceHandler {
 
    private static final Logger LOG = LoggerFactory.getLogger(Hiveserver2Service.class);
-
-   private static final String HIVESERVER2 = "hiveserver2";
-
-   public static final String ENABLE_USER_IMPERSONATION_CONFIG_KEY = "system.user.impersonation.enabled";
-   public static final String HIVE_ENABLE_ADDING_SCHEMA = "system.append.hive.schema.enabled";
-
-   public static final String HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY = "hive.resultset.use.unique.column.names";
-
-   public static final String USER_ID = "CDAP-UserId";
 
    @UseDataSet(WORKSPACE_DATASET)
    private WorkspaceDataset ws;
@@ -258,10 +251,7 @@
      ResultSet rs = null;
      try {
        Connection connection = store.get(id);
-       String grp = scope;
-       if (Strings.isNullOrEmpty(scope)) {
-         grp = WorkspaceDataset.DEFAULT_SCOPE;
-       }
+       String grp = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
        String updatedConnectionURL = addDelegationTokenUpdateURL(connection.getProp("url"), request);
        String dbname = connection.getProp("database");
@@ -401,8 +391,8 @@
    private JsonObject getHiveTableSchema(HttpServiceRequest request, String connectionURL, String dbName, String tableName){
      JsonObject schema = null;
 
-     if(getContext().getRuntimeArguments().containsKey(HIVE_ENABLE_ADDING_SCHEMA)
-             && getContext().getRuntimeArguments().get(HIVE_ENABLE_ADDING_SCHEMA).equalsIgnoreCase("true")) {
+     if(getContext().getRuntimeArguments().containsKey(Hive.HIVE_ENABLE_ADDING_SCHEMA)
+             && getContext().getRuntimeArguments().get(Hive.HIVE_ENABLE_ADDING_SCHEMA).equalsIgnoreCase("true")) {
 
        java.sql.Connection hiveConnection = null;
        PreparedStatement ps = null;
@@ -464,7 +454,7 @@
        // User impersonation
        if (getContext().getRuntimeArguments().containsKey(ENABLE_USER_IMPERSONATION_CONFIG_KEY)
                && getContext().getRuntimeArguments().get(ENABLE_USER_IMPERSONATION_CONFIG_KEY).equalsIgnoreCase("true")){
-         updatedJdbcURL.append(';').append(HiveAuthFactory.HS2_PROXY_USER).append('=').append(request.getHeader(USER_ID));
+         updatedJdbcURL.append(';').append(HiveAuthFactory.HS2_PROXY_USER).append('=').append(request.getHeader(USER_ID_KEY));
        }
      }
 
@@ -473,7 +463,7 @@
      }else{
        updatedJdbcURL.append('&');
      }
-     updatedJdbcURL.append(HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY).append("=false");
+     updatedJdbcURL.append(Hive.HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY).append("=false");
 
      LOG.debug("updatedJdbcURL:: " + updatedJdbcURL);
 

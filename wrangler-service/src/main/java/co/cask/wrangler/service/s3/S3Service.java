@@ -40,6 +40,7 @@ import co.cask.wrangler.sampling.Reservoir;
 import co.cask.wrangler.service.FileTypeDetector;
 import co.cask.wrangler.service.common.AbstractWranglerService;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.service.explorer.BoundedLineInputStream;
 import co.cask.wrangler.utils.ObjectSerDe;
@@ -80,6 +81,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.service.common.Constants.*;
 
 /**
  * Service to explore S3 filesystem
@@ -262,9 +264,7 @@ public class S3Service extends AbstractWranglerService {
         return;
       }
 
-      if (Strings.isNullOrEmpty(scope)) {
-        scope = WorkspaceDataset.DEFAULT_SCOPE;
-      }
+      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
       RequestExtractor extractor = new RequestExtractor(request);
       String header = extractor.getHeader(RequestExtractor.CONTENT_TYPE_HEADER, null);
@@ -277,7 +277,7 @@ public class S3Service extends AbstractWranglerService {
       if (object != null) {
         try (InputStream inputStream = object.getObjectContent()) {
           if (header != null && header.equalsIgnoreCase("text/plain")) {
-            loadSamplableFile(connection.getId(), responder, scope, inputStream, object, lines, fraction, sampler);
+            loadSamplableFile(connection.getId(), responder, group, inputStream, object, lines, fraction, sampler);
             return;
           }
           loadFile(connection.getId(), responder, inputStream, object);

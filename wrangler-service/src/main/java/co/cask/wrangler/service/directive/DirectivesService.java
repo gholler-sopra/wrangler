@@ -64,6 +64,7 @@ import co.cask.wrangler.registry.CompositeDirectiveRegistry;
 import co.cask.wrangler.registry.SystemDirectiveRegistry;
 import co.cask.wrangler.registry.UserDirectiveRegistry;
 import co.cask.wrangler.sampling.Reservoir;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.statistics.BasicStatistics;
 import co.cask.wrangler.statistics.Statistics;
@@ -118,6 +119,7 @@ import javax.ws.rs.QueryParam;
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
 import static co.cask.wrangler.ServiceUtils.success;
+import static co.cask.wrangler.service.common.Constants.*;
 
 /**
  * Service for managing workspaces and also application of directives on to the workspace.
@@ -196,11 +198,9 @@ public class DirectivesService extends AbstractHttpServiceHandler {
         name = id;
       }
 
-      if (scope == null || scope.isEmpty()) {
-        scope = "default";
-      }
+      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
-      table.createWorkspaceMeta(id, name, scope);
+      table.createWorkspaceMeta(id, name, group);
       Map<String, String> properties = new HashMap<>();
       properties.put(PropertyIds.ID, id);
       properties.put(PropertyIds.NAME, name);
@@ -236,12 +236,10 @@ public class DirectivesService extends AbstractHttpServiceHandler {
   public void list(HttpServiceRequest request, HttpServiceResponder responder,
                    @QueryParam("scope") String scope) {
     try {
-      if (scope == null || scope.isEmpty()) {
-        scope = "default";
-      }
+      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
       JsonObject response = new JsonObject();
-      List<Pair<String,String>> workspaces = table.getWorkspaces();
+      List<Pair<String,String>> workspaces = table.getWorkspaces(group);
       JsonArray array = new JsonArray();
       for (Pair<String, String> workspace : workspaces) {
         JsonObject object = new JsonObject();
@@ -304,8 +302,9 @@ public class DirectivesService extends AbstractHttpServiceHandler {
   public void deleteGroup(HttpServiceRequest request, HttpServiceResponder responder,
                      @QueryParam("group") String group) {
     try {
-      int count = table.deleteGroup(group);
-      success(responder, String.format("Successfully deleted %s workspace(s) within group '%s'", count, group));
+      String grp = WorkspaceUtils.getScope(group, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      int count = table.deleteGroup(grp);
+      success(responder, String.format("Successfully deleted %s workspace(s) within group '%s'", count, grp));
     } catch (WorkspaceException e) {
       error(responder, e.getMessage());
     }

@@ -40,6 +40,7 @@ import co.cask.wrangler.sampling.Reservoir;
 import co.cask.wrangler.service.FileTypeDetector;
 import co.cask.wrangler.service.common.AbstractWranglerService;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.service.explorer.BoundedLineInputStream;
 import co.cask.wrangler.utils.ObjectSerDe;
@@ -63,6 +64,7 @@ import java.util.*;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.service.common.Constants.*;
 
 public class ADLSHandler extends AbstractWranglerService {
     private static final Gson gson =
@@ -196,9 +198,7 @@ public class ADLSHandler extends AbstractWranglerService {
                 return;
             }
 
-            if (Strings.isNullOrEmpty(scope)) {
-                scope = WorkspaceDataset.DEFAULT_SCOPE;
-            }
+            String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
 
             if (lines == 0) {
                 throw new NumberFormatException("lines to extract only limit random lines should not be zero");
@@ -209,7 +209,7 @@ public class ADLSHandler extends AbstractWranglerService {
             if (!validateConnection(connectionId, connection, responder)) {
                 return;
             }
-            FileQueryDetails fileQueryDetails = new FileQueryDetails(header, filePath, lines, sampler, fraction, scope);
+            FileQueryDetails fileQueryDetails = new FileQueryDetails(header, filePath, lines, sampler, fraction, group);
             fetchFileFromClient(connection, responder, fileQueryDetails);
         } catch (IOException | NumberFormatException e) {
             ServiceUtils.error(responder, e.getMessage());
