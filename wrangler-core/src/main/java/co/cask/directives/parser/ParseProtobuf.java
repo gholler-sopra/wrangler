@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A step to parse Protobuf encoded memory representations.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name("parse-as-protobuf")
 @Categories(categories = { "parser", "protobuf"})
 @Description("Parses column as protobuf encoded memory representations.")

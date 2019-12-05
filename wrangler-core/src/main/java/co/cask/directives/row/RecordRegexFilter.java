@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
 /**
  * A Wrangle step for filtering rows that match the pattern specified on the column.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(RecordRegexFilter.NAME)
 @Categories(categories = { "row", "data-quality"})
 @Description("Filters rows if the regex is matched or not matched.")

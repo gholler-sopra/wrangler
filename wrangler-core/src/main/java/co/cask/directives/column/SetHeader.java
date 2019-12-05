@@ -39,7 +39,7 @@ import java.util.List;
  * This step will create a copy of the input {@link Row} and clears
  * all previous column names and add new column names.
  */
-@Plugin(type = "directives")
+//@Plugin(type = "directives")
 @Name(SetHeader.NAME)
 @Categories(categories = { "column"})
 @Description("Sets the header of columns, in the order they are specified.")

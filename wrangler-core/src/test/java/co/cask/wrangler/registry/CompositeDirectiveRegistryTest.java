@@ -49,7 +49,7 @@ import javax.annotation.Nullable;
  */
 public class CompositeDirectiveRegistryTest {
 
-  @Plugin(type = Directive.Type)
+  //@Plugin(type = Directive.Type)
   @Name("my-test")
   @Description("Test")
   public static final class MyTest implements Directive {

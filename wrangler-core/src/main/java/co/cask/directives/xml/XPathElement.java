@@ -47,7 +47,7 @@ import java.util.List;
  * </p>
  *
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(XPathElement.NAME)
 @Categories(categories = { "xml"})
 @Description("Extract a single XML element or attribute using XPath.")

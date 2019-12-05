@@ -50,7 +50,7 @@ import java.util.List;
  * </p>
  *
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name("xpath-array")
 @Categories(categories = { "xml"})
 @Description("Extract XML element or attributes as JSON array using XPath.")
