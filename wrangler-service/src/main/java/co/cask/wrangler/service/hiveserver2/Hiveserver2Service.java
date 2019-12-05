@@ -428,7 +428,6 @@
          schema.add("fields", fields);
        } catch (Exception e) {
          LOG.error("Error fetching hive table schema ", e);
-         e.printStackTrace();
        } finally {
          close(rs);
          close(ps);
