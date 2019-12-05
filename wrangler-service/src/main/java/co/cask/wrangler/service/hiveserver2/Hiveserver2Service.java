@@ -74,6 +74,9 @@
    private static final String HIVESERVER2 = "hiveserver2";
 
    public static final String ENABLE_USER_IMPERSONATION_CONFIG_KEY = "system.user.impersonation.enabled";
+   public static final String HIVE_ENABLE_ADDING_SCHEMA = "system.append.hive.schema.enabled";
+
+   public static final String HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY = "hive.resultset.use.unique.column.names";
 
    public static final String USER_ID = "CDAP-UserId";
 
@@ -398,39 +401,54 @@
    private JsonObject getHiveTableSchema(HttpServiceRequest request, String connectionURL, String dbName, String tableName){
      JsonObject schema = null;
 
-     java.sql.Connection hiveConnection=null;
-     PreparedStatement ps = null;
-     ResultSet rs = null;
-     try {
-       String updatedConnectionURL = addDelegationTokenUpdateURL(connectionURL, request);
-       hiveConnection = DriverManager.getConnection(updatedConnectionURL);
+     if(getContext().getRuntimeArguments().containsKey(HIVE_ENABLE_ADDING_SCHEMA)
+             && getContext().getRuntimeArguments().get(HIVE_ENABLE_ADDING_SCHEMA).equalsIgnoreCase("true")) {
 
-       ps = hiveConnection.prepareStatement(String.format("describe %s.%s", dbName, tableName));
-       rs = ps.executeQuery();
+       java.sql.Connection hiveConnection = null;
+       PreparedStatement ps = null;
+       ResultSet rs = null;
+       try {
+         String updatedConnectionURL = addDelegationTokenUpdateURL(connectionURL, request);
+         hiveConnection = DriverManager.getConnection(updatedConnectionURL);
 
-       schema = new JsonObject();
-       schema.addProperty("type", "record");
-       schema.addProperty("name", "etlSchemaBody");
+         ps = hiveConnection.prepareStatement(String.format("describe %s.%s", dbName, tableName));
+         rs = ps.executeQuery();
 
-       JsonArray fields = new JsonArray();
-       while (rs.next()) {
-         JsonObject column = new JsonObject();
-         column.addProperty("name", rs.getString("col_name"));
-         column.addProperty("type", rs.getString("data_type"));
-         fields.add(column);
+         schema = new JsonObject();
+         schema.addProperty("type", "record");
+         schema.addProperty("name", "etlSchemaBody");
+
+         JsonArray fields = new JsonArray();
+         while (rs.next()) {
+           JsonObject column = new JsonObject();
+           column.addProperty("name", rs.getString("col_name"));
+           column.addProperty("type", getCDAPDataType(rs.getString("data_type")));
+           fields.add(column);
+         }
+         schema.add("fields", fields);
+       } catch (Exception e) {
+         LOG.error("Error fetching hive table schema ", e);
+         e.printStackTrace();
+       } finally {
+         close(rs);
+         close(ps);
+         close(hiveConnection);
        }
-       schema.add("fields", fields);
-
-     } catch (Exception e) {
-       LOG.error("Error fetching hive table schema ", e);
-       e.printStackTrace();
-     }finally{
-       close(rs);
-       close(ps);
-       close(hiveConnection);
      }
 
      return schema;
+   }
+
+   private String getCDAPDataType(String type){
+     if(type.equalsIgnoreCase("long")
+             || type.equalsIgnoreCase("bigint")) {
+       return Schema.Type.LONG.name();
+     }
+     if(type.equalsIgnoreCase("int") || type.equalsIgnoreCase("tinyint")
+             || type.equalsIgnoreCase("smallint")) {
+       return Schema.Type.INT.name();
+     }
+     return type;
    }
 
    private String addDelegationTokenUpdateURL(final String jdbcURL, HttpServiceRequest request) throws ClassNotFoundException, LoginException, IOException {
@@ -452,10 +470,11 @@
      }
 
      if(updatedJdbcURL.indexOf("?")==-1){
-       updatedJdbcURL.append("?hive.resultset.use.unique.column.names=false");
+       updatedJdbcURL.append('?');
      }else{
-       updatedJdbcURL.append("&hive.resultset.use.unique.column.names=false");
+       updatedJdbcURL.append('&');
      }
+     updatedJdbcURL.append(HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY).append("=false");
 
      LOG.debug("updatedJdbcURL:: " + updatedJdbcURL);
 

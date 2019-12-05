@@ -31,6 +31,7 @@ import com.google.gson.JsonPrimitive;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
@@ -346,6 +347,11 @@ public final class RecordConvertor implements Serializable {
           return Bytes.toBytes((String) object);
         } else if (object instanceof BigDecimal) {
           return Bytes.toBytes((BigDecimal) object);
+        } else if (object instanceof ByteBuffer) {
+          byte[] arr = new byte[((ByteBuffer)object).remaining()];
+          ((ByteBuffer)object).get(arr);
+          ((ByteBuffer)object).rewind();
+          return arr;
         } else {
           throw new RecordConvertorException(
             String.format("Unable to convert '%s' to bytes for field name '%s'", object.toString(), name)
