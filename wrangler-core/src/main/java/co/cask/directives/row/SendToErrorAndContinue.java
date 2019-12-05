@@ -50,7 +50,7 @@ import java.util.List;
  *   false, then the row will be accepted.
  * </p>
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(SendToErrorAndContinue.NAME)
 @Categories(categories = { "row", "data-quality"})
 @Description("Send records that match condition to the error collector and continues processing.")

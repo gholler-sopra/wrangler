@@ -43,7 +43,7 @@ import java.util.List;
 /**
  * A step to write the record fields as CSV.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name("write-as-csv")
 @Categories(categories = { "writer", "csv"})
 @Description("Writes the records files as well-formatted CSV")

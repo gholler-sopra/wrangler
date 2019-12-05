@@ -33,7 +33,8 @@ public enum ConnectionType {
   ADLS("adls"),
   BIGQUERY("bigquery"),
   KAFKA("kafka"),
-  SPANNER("spanner");
+  SPANNER("spanner"),
+  HIVESERVER2("hiveserver2");
 
   private String type;
 

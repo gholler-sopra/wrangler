@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * A directive to split email address into account and domain.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(SplitEmail.NAME)
 @Categories(categories = { "transform", "email"})
 @Description("Split a email into account and domain.")

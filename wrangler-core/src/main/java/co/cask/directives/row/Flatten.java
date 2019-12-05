@@ -39,7 +39,7 @@ import java.util.List;
 /**
  * A directive that Flattens a record
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name(Flatten.NAME)
 @Categories(categories = { "row"})
 @Description("Separates array elements of one or more columns into indvidual records, copying the other columns.")

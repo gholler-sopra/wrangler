@@ -39,7 +39,7 @@ import java.util.Map;
 /**
  * A step to write the record fields as JSON.
  */
-@Plugin(type = Directive.Type)
+//@Plugin(type = Directive.Type)
 @Name("write-as-json-map")
 @Categories(categories = { "writer", "json"})
 @Description("Writes all record columns as JSON map.")
