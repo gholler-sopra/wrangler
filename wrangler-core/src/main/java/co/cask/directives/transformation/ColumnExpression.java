@@ -53,7 +53,7 @@ import java.util.Set;
  *   Executor step = new ColumnExpression(lineno, directive, column, "if (age > 24 ) { 'adult' } else { 'teen' }");
  * </p>
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(ColumnExpression.NAME)
 @Categories(categories = { "transform"})
 @Description("Sets a column by evaluating a JEXL expression.")

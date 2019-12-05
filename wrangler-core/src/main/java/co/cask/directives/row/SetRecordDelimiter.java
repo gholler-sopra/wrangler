@@ -40,7 +40,7 @@ import java.util.List;
 /**
  * A directive for parsing a string into record using the record delimiter.
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(SetRecordDelimiter.NAME)
 @Categories(categories = { "row",})
 @Description("Sets the record delimiter.")
