@@ -127,10 +127,10 @@ public class FilesystemExplorer extends AbstractWranglerService {
         }
       sendJson(responder, HttpURLConnection.HTTP_OK, gson.toJson(listing));
     } catch (UndeclaredThrowableException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getUndeclaredThrowable().getMessage());
     } catch (Exception e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getMessage());
     }
   }
@@ -169,32 +169,31 @@ public class FilesystemExplorer extends AbstractWranglerService {
       scope = WorkspaceDataset.DEFAULT_SCOPE;
     }
     
-    final String myscope = scope;
     final String impersonatedUser = request.getHeader(PropertyIds.USER_ID);
 
     try {
       UserGroupInformation proxyUgi = getProxyUGI(impersonatedUser);
    
       if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
-        loadSamplableFile(responder, myscope, path, lines, fraction, sampler,
+        loadSamplableFile(responder, scope, path, lines, fraction, sampler,
               proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/xml")) {
-        loadFile(responder, myscope, path, DataType.RECORDS, proxyUgi, impersonatedUser);
+        loadFile(responder, scope, path, DataType.RECORDS, proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/json")) {
-        loadFile(responder, myscope, path, DataType.TEXT, proxyUgi, impersonatedUser);
+        loadFile(responder, scope, path, DataType.TEXT, proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/avro")
         || header.equalsIgnoreCase("application/protobuf")
         || header.equalsIgnoreCase("application/excel")
         || header.contains("image/")) {
-        loadFile(responder, myscope, path, DataType.BINARY, proxyUgi, impersonatedUser);
+        loadFile(responder, scope, path, DataType.BINARY, proxyUgi, impersonatedUser);
       } else {
         error(responder, "Currently doesn't support wrangling of this type of file.");
       }
     } catch (UndeclaredThrowableException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("UndeclaredThrowableException stack: {}", e);
       error(responder, e.getUndeclaredThrowable().getMessage());
     } catch (Exception e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getMessage());
     }
   }
@@ -242,7 +241,7 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
     } catch (Exception e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getMessage());
     }
   }
@@ -351,10 +350,10 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
     } catch (UndeclaredThrowableException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("UndeclaredThrowableException stack: {}", e);
       error(responder, e.getUndeclaredThrowable().getMessage());
     } catch (Exception e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getMessage());
     } 
   }
@@ -460,16 +459,16 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
     } catch (ExplorerException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("ExplorerException stack: {}", e);
       error(responder, e.getMessage());
     } catch (IOException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("IOException stack: {}", e);
       error(responder, e.getMessage());
     } catch (UndeclaredThrowableException e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("UndeclaredThrowableException stack: {}", e);
       error(responder, e.getUndeclaredThrowable().getMessage());
     } catch (Exception e) {
-      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      LOG.error("Exception stack: {}", e);
       error(responder, e.getMessage());
     } finally {
       if (stream != null) {

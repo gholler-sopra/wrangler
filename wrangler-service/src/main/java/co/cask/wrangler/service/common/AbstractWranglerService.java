@@ -40,12 +40,13 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,8 +57,8 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractHttpServiceHandler.class);
   private static final Gson GSON = new Gson();
   protected ConnectionStore store;
-  private static final long UGI_CACHE_EXPIRATION_MS = 3600000L;
-  private static LoadingCache<UGICacheKey, UserGroupInformation> ugiCache;
+  private static final long DEFAULT_UGI_CACHE_EXPIRATION_MS = 3600000L;
+  private static LoadingCache<String, UserGroupInformation> ugiCache;
 
   @UseDataSet(DataPrep.CONNECTIONS_DATASET)
   private Table connectionTable;
@@ -66,11 +67,10 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
   protected WorkspaceDataset ws;
   
   private Map<String, String> runtimeArgs;
+  private static String nsKeytab;
+  private static String nsPrincipal;
+  private static long ugiCacheExpirationMs;
 
-  static {
-    ugiCache = createUGICache();
-  }
-  
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
     super.initialize(context);
@@ -78,6 +78,25 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
         Arrays.toString(context.getRuntimeArguments().entrySet().toArray()));
     runtimeArgs = context.getRuntimeArguments();
     store = new ConnectionStore(connectionTable);
+    
+    if (!isUserImpersonationEnabled()) {
+      return;
+    }
+    
+    if (runtimeArgs == null) {
+      throw new Exception("Runtime arguments not found");
+    }
+    
+    if ((runtimeArgs.containsKey(PropertyIds.NAMESPACE_KETAB_PATH)) &&
+        (runtimeArgs.containsKey(PropertyIds.NAMESPACE_PRINCIPAL_NAME))) {
+      nsKeytab = getLocalizedKeytabPath();
+      nsPrincipal = runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME);
+    } else {
+      throw new Exception(
+          "User impersonation is enabled but valid Keytab/Principal not found in Runtime arguments");
+    }
+
+    initialzeUGICache();
   }
 
   /**
@@ -109,44 +128,24 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
       LOG.debug("Security is disabled");
       return defaultUgi;
     }
-      
-    if (runtimeArgs == null || impersonatedUser == null) {
-      LOG.debug("Runtime arguments or impersonatedUser is null");
-      return defaultUgi;
-    }
-      
+        
     boolean userImpersonationEnabled = isUserImpersonationEnabled();
-    if (!userImpersonationEnabled) {
-      LOG.debug("User impersonation is disabled");
+    if (!userImpersonationEnabled || (impersonatedUser == null)) {
+      LOG.debug("Either User impersonation is disabled or impersonatedUser is null");
       return defaultUgi;
     }
     
-    String nsKeytab;
-    String nsPrincipal;    
-    if ((runtimeArgs.containsKey(PropertyIds.NAMESPACE_KETAB_PATH)) &&
-        (runtimeArgs.containsKey(PropertyIds.NAMESPACE_PRINCIPAL_NAME))) {
-      nsKeytab = getLocalizedKeytabPath();
-      nsPrincipal = runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME);
-    } else {
-      LOG.debug("Keytab/Principal not found in Runtime arguments");
-      return defaultUgi;
-    }
-
-    if (nsKeytab == null || nsPrincipal == null) {
-      LOG.debug("Keytab or principal in Runtime arguments is null");
-      return defaultUgi;
-    }
-    
-    return ugiCache.get(new UGICacheKey(impersonatedUser, nsKeytab, nsPrincipal));
+    return ugiCache.get(impersonatedUser);
   }
   
-  private static UserGroupInformation createProxyUGI(String impersonatedUser, String keytab,
-      String principal) throws IOException, InterruptedException {
-    if (impersonatedUser == null || keytab == null || principal == null) {
+  private static UserGroupInformation createProxyUGI(String impersonatedUser)
+      throws IOException, InterruptedException {
+    if (impersonatedUser == null) {
       return null;
     }
     
-    UserGroupInformation currnetUgi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keytab);
+    UserGroupInformation currnetUgi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+        nsPrincipal, nsKeytab);
     LOG.debug("current UGI {} , realUser {}, userShortName {} , userName {} , loginUser {}", 
               currnetUgi, currnetUgi.getRealUser(), currnetUgi.getShortUserName(), currnetUgi.getUserName(),
               currnetUgi.getLoginUser());
@@ -178,69 +177,41 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
     return false;
   }
   
-  private static LoadingCache<UGICacheKey, UserGroupInformation> createUGICache() {
-    long expirationMillis = UGI_CACHE_EXPIRATION_MS;
+  private static LoadingCache<String, UserGroupInformation> createUGICache() {
+    long expirationMillis = ugiCacheExpirationMs;
     return CacheBuilder.newBuilder()
       .expireAfterWrite(expirationMillis, TimeUnit.MILLISECONDS)
-      .build(new CacheLoader<UGICacheKey, UserGroupInformation>() {
+      .build(new CacheLoader<String, UserGroupInformation>() {
         @Override
-        public UserGroupInformation load(UGICacheKey key) throws Exception {
-          return createProxyUGI(key.getImpersonatedUser(), key.getKeytab(), key.getPrincipal());
+        public UserGroupInformation load(String key) throws Exception {
+          return createProxyUGI(key);
         }
       });
   }
 
-  private static final class UGICacheKey {
-    private final String impersonatedUser;
-    private final String keytab;
-    private final String principal;
-
-    UGICacheKey(String loggedInUser, String keytab, String principal) {
-      this.impersonatedUser = loggedInUser;
-      this.keytab = keytab;
-      this.principal = principal;
+  private void initialzeUGICache() {
+    if (ugiCache != null) {
+      return;
     }
-
-    public String getImpersonatedUser() {
-      return impersonatedUser;
-    }
-
-    public String getKeytab() {
-      return keytab;
-    }
-
-    public String getPrincipal() {
-      return principal;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
+    
+    synchronized (AbstractHttpServiceHandler.class) {
+      if (ugiCache != null) {
+        return;
       }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      UGICacheKey cachekey = (UGICacheKey) o;
-      
-      if (!impersonatedUser.equals(cachekey.getImpersonatedUser())) {
-        return false;
-      }
-      
-      if (!keytab.equals(cachekey.getKeytab())) {
-        return false;
-      }
-      
-      if (!principal.equals(cachekey.getPrincipal())) {
-        return false;
-      }
-      
-      return true;
+      ugiCacheExpirationMs = getUgiCacheExpirationMs();
+      ugiCache = createUGICache();
     }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(impersonatedUser, keytab, principal);
+  }
+  
+  private long getUgiCacheExpirationMs() {
+    Configuration conf = new Configuration();
+    long tokenRenewInterval = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+    long retValue = DEFAULT_UGI_CACHE_EXPIRATION_MS;
+    if (tokenRenewInterval < DEFAULT_UGI_CACHE_EXPIRATION_MS) {
+      retValue = (tokenRenewInterval / 2);
     }
+    LOG.debug("Setting cache expiration time to: {} ms", retValue);
+    return retValue;
   }
 }

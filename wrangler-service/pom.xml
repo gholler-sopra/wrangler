@@ -28,7 +28,6 @@
   <properties>
     <app.main.class>co.cask.wrangler.DataPrep</app.main.class>
     <tika.version>1.14</tika.version>
-    <hadoop.version>2.3.0</hadoop.version>
     <google.cloud.spanner.version>0.53.0-beta</google.cloud.spanner.version>
   </properties>
 
@@ -50,8 +49,14 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>2.7.3</version>
+      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.avro</groupId>
