@@ -43,6 +43,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.twill.filesystem.Location;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -50,9 +52,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
+import java.security.PrivilegedExceptionAction;
 import java.security.Security;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -76,6 +81,18 @@ public class FilesystemExplorer extends AbstractWranglerService {
   private static final String COLUMN_NAME = "body";
   private static final int FILE_SIZE = 10 * 1024 * 1024;
 
+  interface CheckFile { 
+      Location run() throws IOException, ExplorerException; 
+  } 
+  
+  interface ReadFileBytes { 
+    byte[] run() throws IOException; 
+  } 
+
+  interface ReadFile { 
+      void run() throws IOException; 
+  } 
+  
   /**
    * Lists the content of the path specified using the {@Location}.
    *
@@ -91,10 +108,29 @@ public class FilesystemExplorer extends AbstractWranglerService {
                    @QueryParam("path") String path,
                    @QueryParam("hidden") boolean hidden) throws Exception {
 
+    LOG.debug("List API. HTTP Request headers: {}",
+            Arrays.toString(request.getAllHeaders().entrySet().toArray()));
+    
+    final String impersonatedUser = request.getHeader(PropertyIds.USER_ID);
+    
     try {
-      Map<String, Object> listing = explorer.browse(path, hidden);
+        UserGroupInformation proxyUgi = getProxyUGI(impersonatedUser);
+        Map<String, Object> listing;
+        if (proxyUgi == null) {
+          listing = explorer.browse(path, hidden);
+        } else {
+          listing = proxyUgi.doAs(new PrivilegedExceptionAction<Map<String, Object>> () {
+            public Map<String, Object> run() throws Exception {
+                return explorer.browse(path, hidden);
+            }
+          });
+        }
       sendJson(responder, HttpURLConnection.HTTP_OK, gson.toJson(listing));
-    } catch (ExplorerException e) {
+    } catch (UndeclaredThrowableException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      error(responder, e.getUndeclaredThrowable().getMessage());
+    } catch (Exception e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
     }
   }
@@ -115,6 +151,12 @@ public class FilesystemExplorer extends AbstractWranglerService {
                    @QueryParam("sampler") String sampler,
                    @QueryParam("fraction") double fraction,
                    @QueryParam("scope") String scope) {
+      
+    LOG.debug("Read API. HTTP Request headers: {}", 
+            Arrays.toString(request.getAllHeaders().entrySet().toArray()));
+    LOG.debug("Read API. Query Params: Path {}, lines {}, sampler {}, fraction {}, scope {}",
+            path, lines, sampler, fraction, scope);
+
     RequestExtractor extractor = new RequestExtractor(request);
     String header = extractor.getHeader(RequestExtractor.CONTENT_TYPE_HEADER, null);
 
@@ -126,20 +168,34 @@ public class FilesystemExplorer extends AbstractWranglerService {
     if (scope == null || scope.isEmpty()) {
       scope = WorkspaceDataset.DEFAULT_SCOPE;
     }
+    
+    final String myscope = scope;
+    final String impersonatedUser = request.getHeader(PropertyIds.USER_ID);
 
-    if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
-      loadSamplableFile(responder, scope, path, lines, fraction, sampler);
-    } else if (header.equalsIgnoreCase("application/xml")) {
-      loadFile(responder, scope, path, DataType.RECORDS);
-    } else if (header.equalsIgnoreCase("application/json")) {
-      loadFile(responder, scope, path, DataType.TEXT);
-    } else if (header.equalsIgnoreCase("application/avro")
-      || header.equalsIgnoreCase("application/protobuf")
-      || header.equalsIgnoreCase("application/excel")
-      || header.contains("image/")) {
-      loadFile(responder, scope, path, DataType.BINARY);
-    } else {
-      error(responder, "Currently doesn't support wrangling of this type of file.");
+    try {
+      UserGroupInformation proxyUgi = getProxyUGI(impersonatedUser);
+   
+      if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
+        loadSamplableFile(responder, myscope, path, lines, fraction, sampler,
+              proxyUgi, impersonatedUser);
+      } else if (header.equalsIgnoreCase("application/xml")) {
+        loadFile(responder, myscope, path, DataType.RECORDS, proxyUgi, impersonatedUser);
+      } else if (header.equalsIgnoreCase("application/json")) {
+        loadFile(responder, myscope, path, DataType.TEXT, proxyUgi, impersonatedUser);
+      } else if (header.equalsIgnoreCase("application/avro")
+        || header.equalsIgnoreCase("application/protobuf")
+        || header.equalsIgnoreCase("application/excel")
+        || header.contains("image/")) {
+        loadFile(responder, myscope, path, DataType.BINARY, proxyUgi, impersonatedUser);
+      } else {
+        error(responder, "Currently doesn't support wrangling of this type of file.");
+      }
+    } catch (UndeclaredThrowableException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      error(responder, e.getUndeclaredThrowable().getMessage());
+    } catch (Exception e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      error(responder, e.getMessage());
     }
   }
 
@@ -154,7 +210,8 @@ public class FilesystemExplorer extends AbstractWranglerService {
   @GET
   public void specification(HttpServiceRequest request, HttpServiceResponder responder,
                             @QueryParam("path") String path, @QueryParam("wid") String workspaceId) {
-    JsonObject response = new JsonObject();
+      
+     JsonObject response = new JsonObject();
     try {
       Format format = Format.TEXT;
       if (workspaceId != null) {
@@ -185,35 +242,75 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
     } catch (Exception e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
     }
   }
 
-  private void loadFile(HttpServiceResponder responder, String scope, String path, DataType type) {
-    JsonObject response = new JsonObject();
-    BufferedInputStream stream = null;
+  private void loadFile(HttpServiceResponder responder, String scope, String path, DataType type,
+          UserGroupInformation ugi, String impersonatedUser) {
+    JsonObject response = new JsonObject();    
+
     try {
-      Location location = explorer.getLocation(path);
-      if (!location.exists()) {
-        error(responder, String.format("%s (No such file)", path));
-        return;
-      }
+        Location location;
+        CheckFile cf = () -> {
+          Location loc = explorer.getLocation(path);
+          if (!loc.exists()) {
+            throw new IOException(String.format("%s (No such file)", path));
+          }
 
-      if (location.length() > FILE_SIZE) {
-        error(responder, "Files larger than 10MB are currently not supported.");
-        return;
+          if (loc.length() > FILE_SIZE) {
+            throw new IOException("Files larger than 10MB are currently not supported.");
+          }
+          return loc;
+        };
+      
+       
+      if (ugi == null) {
+        location = cf.run();
+      } else {
+        location = ugi.doAs(new PrivilegedExceptionAction<Location> () {
+          public Location run() throws Exception {
+            return cf.run();
+          }
+        });
       }
-
       // Creates workspace.
       String name = location.getName();
       String id = String.format("%s:%s:%s:%d", scope, location.getName(),
                                 location.toURI().getPath(), System.nanoTime());
       id = ServiceUtils.generateMD5(id);
+      LOG.debug("Creating workspace meta .. id {}, scope {}, name {}", id, scope, name);
       ws.createWorkspaceMeta(id, scope, name);
 
-      stream = new BufferedInputStream(location.getInputStream());
-      byte[] bytes = new byte[(int)location.length() + 1];
-      stream.read(bytes);
+      byte[] bytes;
+      ReadFileBytes rf = () -> {
+        byte[] bytesRead = new byte[(int)(location.length()) + 1];
+        BufferedInputStream stream = null;
+        try {
+          stream = new BufferedInputStream(location.getInputStream());
+          stream.read(bytesRead);
+        } finally {
+          if (stream != null) {
+            try {
+              stream.close();
+            } catch (IOException e) {
+              // Nothing much we can do here.
+            }
+          }
+        }
+        return bytesRead;
+      };
+      
+      if (ugi == null) {
+        bytes = rf.run();
+      } else {
+        bytes = ugi.doAs(new PrivilegedExceptionAction<byte[]> () {
+          public byte[] run() throws Exception {
+            return rf.run();
+          }
+        });
+      }
 
       // Set all properties and write to workspace.
       Map<String, String> properties = new HashMap<>();
@@ -253,54 +350,85 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.addProperty("count", values.size());
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
-    } catch (Exception e){
+    } catch (UndeclaredThrowableException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      error(responder, e.getUndeclaredThrowable().getMessage());
+    } catch (Exception e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
-    } finally {
-      if (stream != null) {
-        try {
-          stream.close();
-        } catch (IOException e) {
-          // Nothing much we can do here.
-        }
-      }
-    }
+    } 
   }
 
   private void loadSamplableFile(HttpServiceResponder responder,
-                                 String scope, String path, int lines, double fraction, String sampler) {
+                                 String scope, String path, int lines, double fraction, String sampler,
+                                 UserGroupInformation ugi, String impersonatedUser) {
     JsonObject response = new JsonObject();
     SamplingMethod samplingMethod = SamplingMethod.fromString(sampler);
+
     if (sampler == null || sampler.isEmpty() || SamplingMethod.fromString(sampler) == null) {
       samplingMethod = SamplingMethod.FIRST;
     }
+    
+    final SamplingMethod finalSamplingMethod = samplingMethod;
+    
     BoundedLineInputStream stream = null;
     try {
-      Location location = explorer.getLocation(path);
-      if (!location.exists()) {
-        error(responder, String.format("%s (No such file)", path));
-        return;
+      Location location;
+      CheckFile cf = () -> {
+        Location loc = explorer.getLocation(path);
+        if (!loc.exists()) {
+          throw new IOException(String.format("%s (No such file)", path));
+        }
+        return loc;
+      };
+        
+      if (ugi == null) {
+        location= cf.run();
+      } else {
+        location = ugi.doAs(new PrivilegedExceptionAction<Location> () {
+          public Location run() throws Exception {
+            return cf.run();
+          }
+        });
       }
+
       String name = location.getName();
       String id = String.format("%s:%s:%d", location.getName(), location.toURI().getPath(), System.nanoTime());
       id = ServiceUtils.generateMD5(id);
+      LOG.debug("Creating workspace meta .. id {}, scope {}, name {}", id, scope, name);
       ws.createWorkspaceMeta(id, scope, name);
 
       // Iterate through lines to extract only 'limit' random lines.
       // Depending on the type, the sampling of the input is performed.
       List<Row> rows = new ArrayList<>();
-      BoundedLineInputStream blis = BoundedLineInputStream.iterator(location.getInputStream(), Charsets.UTF_8, lines);
-      Iterator<String> it = blis;
-      if (samplingMethod == SamplingMethod.POISSON) {
-        it = new Poisson<String>(fraction).sample(blis);
-      } else if (samplingMethod == SamplingMethod.BERNOULLI) {
-        it = new Bernoulli<String>(fraction).sample(blis);
-      } else if (samplingMethod == SamplingMethod.RESERVOIR) {
-        it = new Reservoir<String>(lines).sample(blis);
-      }
-      while(it.hasNext()) {
-        rows.add(new Row(COLUMN_NAME, it.next()));
-      }
+      
+      ReadFile rf = () -> {
+        BoundedLineInputStream blis = BoundedLineInputStream.iterator(location.getInputStream(),
+            Charsets.UTF_8, lines);
+        Iterator<String> it = blis;
+        if (finalSamplingMethod == SamplingMethod.POISSON) {
+          it = new Poisson<String>(fraction).sample(blis);
+        } else if (finalSamplingMethod == SamplingMethod.BERNOULLI) {
+          it = new Bernoulli<String>(fraction).sample(blis);
+        } else if (finalSamplingMethod == SamplingMethod.RESERVOIR) {
+          it = new Reservoir<String>(lines).sample(blis);
+        }
+        while(it.hasNext()) {
+          rows.add(new Row(COLUMN_NAME, it.next()));
+        }
+      };
 
+      if (ugi == null) {
+        rf.run();
+      } else {
+        ugi.doAs(new PrivilegedExceptionAction<Integer> () {
+          public Integer run() throws Exception {
+            rf.run();
+            return 0;
+          }
+        });
+      }
+ 
       // Set all properties and write to workspace.
       Map<String, String> properties = new HashMap<>();
       properties.put(PropertyIds.FILE_NAME, location.getName());
@@ -332,10 +460,16 @@ public class FilesystemExplorer extends AbstractWranglerService {
       response.add("values", values);
       sendJson(responder, HttpURLConnection.HTTP_OK, response.toString());
     } catch (ExplorerException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
     } catch (IOException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
+    } catch (UndeclaredThrowableException e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
+      error(responder, e.getUndeclaredThrowable().getMessage());
     } catch (Exception e) {
+      LOG.error("Exception stack: {}", Arrays.toString(e.getStackTrace()));
       error(responder, e.getMessage());
     } finally {
       if (stream != null) {

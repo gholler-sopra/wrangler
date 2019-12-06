@@ -55,6 +55,7 @@ public final class Explorer {
   // Some constants for unknown or device types.
   public final static String DEVICE = "device";
   public final static String UNKNOWN = "UNKNOWN";
+  private Location baseLocation;
 
   public Explorer(DatasetProvider provider) {
     this.provider = provider;
@@ -65,6 +66,14 @@ public final class Explorer {
       this.operatingSystem = os.toLowerCase();
     }
     detector = new FileTypeDetector();
+    
+    try {
+        FileSet fileset = (FileSet) provider.acquire();
+        this.baseLocation = fileset.getBaseLocation();
+        provider.release(fileset);
+    } catch (Exception e) {
+        this.baseLocation = null;
+    }
   }
 
   /**
@@ -231,12 +240,7 @@ public final class Explorer {
    * @throws URISyntaxException issue constructing the URI.
    */
   public Location getLocation(String path) throws ExplorerException {
-    FileSet fileset = null;
     try {
-      fileset = (FileSet) provider.acquire();
-      Location baseLocation = fileset.getBaseLocation();
-      provider.release(fileset);
-
       URI uri = baseLocation.toURI();
       Location location = baseLocation.getLocationFactory().create(
         new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(),
@@ -245,5 +249,5 @@ public final class Explorer {
     } catch (Exception e) {
       throw new ExplorerException(e);
     }
-  }
+  }  
 }
