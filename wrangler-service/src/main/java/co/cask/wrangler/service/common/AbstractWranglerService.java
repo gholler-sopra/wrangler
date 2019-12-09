@@ -121,8 +121,8 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
       .anyMatch(directive -> directive.startsWith("parse-as-csv") && directive.endsWith("true"));
   }
   
-  public UserGroupInformation getProxyUGI(String impersonatedUser) throws IOException, 
-                           InterruptedException, ExecutionException {
+  public UserGroupInformation getProxyUGI(String impersonatedUser) throws IOException,
+                InterruptedException, ExecutionException, IllegalArgumentException {
     UserGroupInformation defaultUgi = null;
     if (!UserGroupInformation.isSecurityEnabled()) {
       LOG.debug("Security is disabled");
@@ -130,9 +130,14 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
     }
         
     boolean userImpersonationEnabled = isUserImpersonationEnabled();
-    if (!userImpersonationEnabled || (impersonatedUser == null)) {
-      LOG.debug("Either User impersonation is disabled or impersonatedUser is null");
+    if (!userImpersonationEnabled) {
+      LOG.debug("User impersonation is disabled");
       return defaultUgi;
+    }
+    
+    if (impersonatedUser == null) {
+      throw new IllegalArgumentException(
+          "User impersonation is enabled but impersonatedUser name is provided as null");
     }
     
     return ugiCache.get(impersonatedUser);
@@ -170,11 +175,8 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
   }
   
   protected boolean isUserImpersonationEnabled() {
-    if ((runtimeArgs.containsKey(PropertyIds.USER_IMPERSONATION_ENABLED)) &&
-              (runtimeArgs.get(PropertyIds.USER_IMPERSONATION_ENABLED).equalsIgnoreCase("true"))) {
-      return true;
-    }
-    return false;
+    return ((runtimeArgs.containsKey(PropertyIds.USER_IMPERSONATION_ENABLED)) &&
+              (runtimeArgs.get(PropertyIds.USER_IMPERSONATION_ENABLED).equalsIgnoreCase("true")));
   }
   
   private static LoadingCache<String, UserGroupInformation> createUGICache() {
@@ -208,7 +210,7 @@ public class AbstractWranglerService extends AbstractHttpServiceHandler {
     long tokenRenewInterval = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     long retValue = DEFAULT_UGI_CACHE_EXPIRATION_MS;
-    if (tokenRenewInterval < DEFAULT_UGI_CACHE_EXPIRATION_MS) {
+    if (tokenRenewInterval > 0) {
       retValue = (tokenRenewInterval / 2);
     }
     LOG.debug("Setting cache expiration time to: {} ms", retValue);
