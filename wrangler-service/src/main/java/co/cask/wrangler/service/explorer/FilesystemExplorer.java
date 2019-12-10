@@ -36,6 +36,7 @@ import co.cask.wrangler.sampling.Poisson;
 import co.cask.wrangler.sampling.Reservoir;
 import co.cask.wrangler.service.common.AbstractWranglerService;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.utils.ObjectSerDe;
 import com.google.common.base.Charsets;
@@ -68,6 +69,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * A {@link FilesystemExplorer} is a HTTP Service handler for exploring the filesystem.
@@ -165,9 +167,7 @@ public class FilesystemExplorer extends AbstractWranglerService {
       return;
     }
 
-    if (scope == null || scope.isEmpty()) {
-      scope = WorkspaceDataset.DEFAULT_SCOPE;
-    }
+    String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
     
     final String impersonatedUser = request.getHeader(PropertyIds.USER_ID);
 
@@ -175,17 +175,17 @@ public class FilesystemExplorer extends AbstractWranglerService {
       UserGroupInformation proxyUgi = getProxyUGI(impersonatedUser);
    
       if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
-        loadSamplableFile(responder, scope, path, lines, fraction, sampler,
+        loadSamplableFile(responder, effectiveScope, path, lines, fraction, sampler,
               proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/xml")) {
-        loadFile(responder, scope, path, DataType.RECORDS, proxyUgi, impersonatedUser);
+        loadFile(responder, effectiveScope, path, DataType.RECORDS, proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/json")) {
-        loadFile(responder, scope, path, DataType.TEXT, proxyUgi, impersonatedUser);
+        loadFile(responder, effectiveScope, path, DataType.TEXT, proxyUgi, impersonatedUser);
       } else if (header.equalsIgnoreCase("application/avro")
         || header.equalsIgnoreCase("application/protobuf")
         || header.equalsIgnoreCase("application/excel")
         || header.contains("image/")) {
-        loadFile(responder, scope, path, DataType.BINARY, proxyUgi, impersonatedUser);
+        loadFile(responder, effectiveScope, path, DataType.BINARY, proxyUgi, impersonatedUser);
       } else {
         error(responder, "Currently doesn't support wrangling of this type of file.");
       }

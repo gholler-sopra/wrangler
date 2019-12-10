@@ -37,6 +37,7 @@ import co.cask.wrangler.dataset.connections.Connection;
 import co.cask.wrangler.dataset.connections.ConnectionStore;
 import co.cask.wrangler.dataset.workspace.DataType;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.utils.ObjectSerDe;
 import com.google.common.annotations.VisibleForTesting;
@@ -94,6 +95,7 @@ import javax.ws.rs.QueryParam;
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
 import static co.cask.wrangler.service.directive.DirectivesService.WORKSPACE_DATASET;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Class description here.
@@ -533,16 +535,14 @@ public class DatabaseService extends AbstractHttpServiceHandler {
     try {
 
       cleanup = loadAndExecute(id, connection -> {
-        String grp = scope;
-        if (Strings.isNullOrEmpty(scope)) {
-          grp = WorkspaceDataset.DEFAULT_SCOPE;
-        }
+        String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
+
         try (Statement statement = connection.createStatement();
              ResultSet result = statement.executeQuery(String.format("select * from %s", table))) {
           List<Row> rows = getRows(lines, result);
 
           String identifier = ServiceUtils.generateMD5(table);
-          ws.createWorkspaceMeta(identifier, grp, table);
+          ws.createWorkspaceMeta(identifier, effectiveScope, table);
           ObjectSerDe<List<Row>> serDe = new ObjectSerDe<>();
           byte[] data = serDe.toByteArray(rows);
           ws.writeToWorkspace(identifier, WorkspaceDataset.DATA_COL, DataType.RECORDS, data);

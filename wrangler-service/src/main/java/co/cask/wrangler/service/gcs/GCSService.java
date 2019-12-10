@@ -36,6 +36,7 @@ import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
 import co.cask.wrangler.service.FileTypeDetector;
 import co.cask.wrangler.service.common.AbstractWranglerService;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.service.gcp.GCPUtils;
 import co.cask.wrangler.utils.ObjectSerDe;
@@ -83,6 +84,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service to explore <code>GCS</code> filesystem
@@ -348,9 +350,7 @@ public class GCSService extends AbstractWranglerService {
         return;
       }
 
-      if (scope == null || scope.isEmpty()) {
-        scope = WorkspaceDataset.DEFAULT_SCOPE;
-      }
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
       Connection connection = store.get(connectionId);
       if (!validateConnection(connectionId, connection, responder)) {
@@ -367,12 +367,12 @@ public class GCSService extends AbstractWranglerService {
       }
 
       String blobName = blob.getName();
-      String id = ServiceUtils.generateMD5(String.format("%s:%s", scope, blobName));
+      String id = ServiceUtils.generateMD5(String.format("%s:%s", effectiveScope, blobName));
       File file = new File(blobName);
 
       if (!blob.isDirectory()) {
         byte[] bytes = readGCSFile(blob, Math.min(blob.getSize().intValue(), GCSService.FILE_SIZE));
-        ws.createWorkspaceMeta(id, scope, file.getName());
+        ws.createWorkspaceMeta(id, effectiveScope, file.getName());
 
         String encoding = BytesDecoder.guessEncoding(bytes);
         if (contentType.equalsIgnoreCase("text/plain")

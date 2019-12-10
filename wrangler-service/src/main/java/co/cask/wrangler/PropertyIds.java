@@ -82,10 +82,20 @@ public final class PropertyIds {
   
   // Namespace reference principal
   public static final String NAMESPACE_PRINCIPAL_NAME = "pipeline.principal.name";
-  
+
   // Namespace reference to enable/disable propagation of logged in user identity to downstream systems
   public static final String USER_IMPERSONATION_ENABLED = "system.user.impersonation.enabled";
-  
+
   // Request header identifying actual user who sent request
   public static final String USER_ID = "CDAP-UserId";
+
+  public static final String DATAPREP_WORKSPACE_LEVEL_KEY = "dataprep.workspace.scope";
+
+  public static class Hive{
+
+    public static final String HIVE_ENABLE_ADDING_SCHEMA = "system.append.hive.schema.enabled";
+
+    public static final String HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY = "hive.resultset.use.unique.column.names";
+  }
+
 }

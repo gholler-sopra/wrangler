@@ -29,6 +29,7 @@ import co.cask.wrangler.dataset.connections.Connection;
 import co.cask.wrangler.dataset.workspace.DataType;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
 import co.cask.wrangler.service.common.AbstractWranglerService;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 import co.cask.wrangler.service.gcp.GCPUtils;
 import co.cask.wrangler.utils.ObjectSerDe;
@@ -84,6 +85,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service for testing, browsing, and reading using a BigQuery connection.
@@ -247,9 +249,7 @@ public class BigQueryService extends AbstractWranglerService {
       return;
     }
 
-    if (scope == null || scope.isEmpty()) {
-      scope = WorkspaceDataset.DEFAULT_SCOPE;
-    }
+    String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
     Map<String, String> connectionProperties = connection.getAllProps();
     DatasetId datasetId = getDatasetId(datasetStr, GCPUtils.getProjectId(connection));
@@ -258,8 +258,8 @@ public class BigQueryService extends AbstractWranglerService {
     TableId tableIdObject = TableId.of(datasetId.getProject(), datasetId.getDataset(), tableId);
     Pair<List<Row>, Schema> tableData = getData(connection, tableIdObject);
 
-    String identifier = ServiceUtils.generateMD5(String.format("%s:%s", scope, tableId));
-    ws.createWorkspaceMeta(identifier, scope, tableId);
+    String identifier = ServiceUtils.generateMD5(String.format("%s:%s", effectiveScope, tableId));
+    ws.createWorkspaceMeta(identifier, effectiveScope, tableId);
     ObjectSerDe<List<Row>> serDe = new ObjectSerDe<>();
     byte[] data = serDe.toByteArray(tableData.getFirst());
     ws.writeToWorkspace(identifier, WorkspaceDataset.DATA_COL, DataType.RECORDS, data);
