@@ -82,4 +82,10 @@ public final class PropertyIds {
   
   // Namespace reference principal
   public static final String NAMESPACE_PRINCIPAL_NAME = "pipeline.principal.name";
+  
+  // Namespace reference to enable/disable propagation of logged in user identity to downstream systems
+  public static final String USER_IMPERSONATION_ENABLED = "system.user.impersonation.enabled";
+  
+  // Request header identifying actual user who sent request
+  public static final String USER_ID = "CDAP-UserId";
 }
