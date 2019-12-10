@@ -19,7 +19,7 @@ package co.cask.wrangler.service.common;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
 
 import java.util.Map;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 public class WorkspaceUtils {
 
@@ -37,8 +37,8 @@ public class WorkspaceUtils {
             return providedScope;
         }
         // if impersonation is enabled, use user scope
-        if(runtimeArgs.containsKey(ENABLE_USER_IMPERSONATION_CONFIG_KEY)
-                && runtimeArgs.get(ENABLE_USER_IMPERSONATION_CONFIG_KEY).equalsIgnoreCase("true")
+        if(runtimeArgs.containsKey(USER_IMPERSONATION_ENABLED)
+                && runtimeArgs.get(USER_IMPERSONATION_ENABLED).equalsIgnoreCase("true")
                 && loggedInUser !=null){
             return loggedInUser;
         }

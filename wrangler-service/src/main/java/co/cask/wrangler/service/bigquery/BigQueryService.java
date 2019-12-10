@@ -85,7 +85,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service for testing, browsing, and reading using a BigQuery connection.
@@ -249,7 +249,7 @@ public class BigQueryService extends AbstractWranglerService {
       return;
     }
 
-    String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+    String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
     Map<String, String> connectionProperties = connection.getAllProps();
     DatasetId datasetId = getDatasetId(datasetStr, GCPUtils.getProjectId(connection));
@@ -258,8 +258,8 @@ public class BigQueryService extends AbstractWranglerService {
     TableId tableIdObject = TableId.of(datasetId.getProject(), datasetId.getDataset(), tableId);
     Pair<List<Row>, Schema> tableData = getData(connection, tableIdObject);
 
-    String identifier = ServiceUtils.generateMD5(String.format("%s:%s", group, tableId));
-    ws.createWorkspaceMeta(identifier, group, tableId);
+    String identifier = ServiceUtils.generateMD5(String.format("%s:%s", effectiveScope, tableId));
+    ws.createWorkspaceMeta(identifier, effectiveScope, tableId);
     ObjectSerDe<List<Row>> serDe = new ObjectSerDe<>();
     byte[] data = serDe.toByteArray(tableData.getFirst());
     ws.writeToWorkspace(identifier, WorkspaceDataset.DATA_COL, DataType.RECORDS, data);

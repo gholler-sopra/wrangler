@@ -81,7 +81,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service to explore S3 filesystem
@@ -264,7 +264,7 @@ public class S3Service extends AbstractWranglerService {
         return;
       }
 
-      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
       RequestExtractor extractor = new RequestExtractor(request);
       String header = extractor.getHeader(RequestExtractor.CONTENT_TYPE_HEADER, null);
@@ -277,7 +277,7 @@ public class S3Service extends AbstractWranglerService {
       if (object != null) {
         try (InputStream inputStream = object.getObjectContent()) {
           if (header != null && header.equalsIgnoreCase("text/plain")) {
-            loadSamplableFile(connection.getId(), responder, group, inputStream, object, lines, fraction, sampler);
+            loadSamplableFile(connection.getId(), responder, effectiveScope, inputStream, object, lines, fraction, sampler);
             return;
           }
           loadFile(connection.getId(), responder, inputStream, object);

@@ -73,7 +73,7 @@ import javax.ws.rs.QueryParam;
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
 import static co.cask.wrangler.service.directive.DirectivesService.WORKSPACE_DATASET;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service for handling Kafka connections.
@@ -209,13 +209,13 @@ public final class KafkaService extends AbstractHttpServiceHandler {
         return;
       }
 
-      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
       KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
       KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config.get());
       consumer.subscribe(Lists.newArrayList(topic));
-      String uuid = ServiceUtils.generateMD5(String.format("%s:%s.%s", group, id, topic));
-      ws.createWorkspaceMeta(uuid, group, topic);
+      String uuid = ServiceUtils.generateMD5(String.format("%s:%s.%s", effectiveScope, id, topic));
+      ws.createWorkspaceMeta(uuid, effectiveScope, topic);
 
       try {
         boolean running = true;

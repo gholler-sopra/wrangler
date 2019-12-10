@@ -119,7 +119,7 @@ import javax.ws.rs.QueryParam;
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
 import static co.cask.wrangler.ServiceUtils.success;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service for managing workspaces and also application of directives on to the workspace.
@@ -198,9 +198,9 @@ public class DirectivesService extends AbstractHttpServiceHandler {
         name = id;
       }
 
-      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
-      table.createWorkspaceMeta(id, name, group);
+      table.createWorkspaceMeta(id, name, effectiveScope);
       Map<String, String> properties = new HashMap<>();
       properties.put(PropertyIds.ID, id);
       properties.put(PropertyIds.NAME, name);
@@ -236,10 +236,10 @@ public class DirectivesService extends AbstractHttpServiceHandler {
   public void list(HttpServiceRequest request, HttpServiceResponder responder,
                    @QueryParam("scope") String scope) {
     try {
-      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
       JsonObject response = new JsonObject();
-      List<Pair<String,String>> workspaces = table.getWorkspaces(group);
+      List<Pair<String,String>> workspaces = table.getWorkspaces(effectiveScope);
       JsonArray array = new JsonArray();
       for (Pair<String, String> workspace : workspaces) {
         JsonObject object = new JsonObject();
@@ -302,9 +302,9 @@ public class DirectivesService extends AbstractHttpServiceHandler {
   public void deleteGroup(HttpServiceRequest request, HttpServiceResponder responder,
                      @QueryParam("group") String group) {
     try {
-      String grp = WorkspaceUtils.getScope(group, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
-      int count = table.deleteGroup(grp);
-      success(responder, String.format("Successfully deleted %s workspace(s) within group '%s'", count, grp));
+      String effectiveScope = WorkspaceUtils.getScope(group, request.getHeader(USER_ID), getContext().getRuntimeArguments());
+      int count = table.deleteGroup(effectiveScope);
+      success(responder, String.format("Successfully deleted %s workspace(s) within group '%s'", count, effectiveScope));
     } catch (WorkspaceException e) {
       error(responder, e.getMessage());
     }

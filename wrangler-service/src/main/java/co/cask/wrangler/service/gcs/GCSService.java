@@ -84,7 +84,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service to explore <code>GCS</code> filesystem
@@ -350,7 +350,7 @@ public class GCSService extends AbstractWranglerService {
         return;
       }
 
-      String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+      String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
       Connection connection = store.get(connectionId);
       if (!validateConnection(connectionId, connection, responder)) {
@@ -367,12 +367,12 @@ public class GCSService extends AbstractWranglerService {
       }
 
       String blobName = blob.getName();
-      String id = ServiceUtils.generateMD5(String.format("%s:%s", group, blobName));
+      String id = ServiceUtils.generateMD5(String.format("%s:%s", effectiveScope, blobName));
       File file = new File(blobName);
 
       if (!blob.isDirectory()) {
         byte[] bytes = readGCSFile(blob, Math.min(blob.getSize().intValue(), GCSService.FILE_SIZE));
-        ws.createWorkspaceMeta(id, group, file.getName());
+        ws.createWorkspaceMeta(id, effectiveScope, file.getName());
 
         String encoding = BytesDecoder.guessEncoding(bytes);
         if (contentType.equalsIgnoreCase("text/plain")

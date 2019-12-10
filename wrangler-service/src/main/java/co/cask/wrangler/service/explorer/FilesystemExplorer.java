@@ -64,7 +64,7 @@ import javax.ws.rs.QueryParam;
 
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
-import static co.cask.wrangler.service.common.Constants.*;
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * A {@link FilesystemExplorer} is a HTTP Service handler for exploring the filesystem.
@@ -125,19 +125,19 @@ public class FilesystemExplorer extends AbstractWranglerService {
       return;
     }
 
-    String group = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+    String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
     if (header.equalsIgnoreCase("text/plain") || header.contains("text/")) {
-      loadSamplableFile(responder, group, path, lines, fraction, sampler);
+      loadSamplableFile(responder, effectiveScope, path, lines, fraction, sampler);
     } else if (header.equalsIgnoreCase("application/xml")) {
-      loadFile(responder, group, path, DataType.RECORDS);
+      loadFile(responder, effectiveScope, path, DataType.RECORDS);
     } else if (header.equalsIgnoreCase("application/json")) {
-      loadFile(responder, group, path, DataType.TEXT);
+      loadFile(responder, effectiveScope, path, DataType.TEXT);
     } else if (header.equalsIgnoreCase("application/avro")
       || header.equalsIgnoreCase("application/protobuf")
       || header.equalsIgnoreCase("application/excel")
       || header.contains("image/")) {
-      loadFile(responder, group, path, DataType.BINARY);
+      loadFile(responder, effectiveScope, path, DataType.BINARY);
     } else {
       error(responder, "Currently doesn't support wrangling of this type of file.");
     }

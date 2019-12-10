@@ -64,7 +64,7 @@
  import org.apache.hadoop.hive.shims.Utils;
  import org.apache.hive.service.auth.HiveAuthFactory;
 
- import static co.cask.wrangler.service.common.Constants.*;
+ import static co.cask.wrangler.PropertyIds.*;
 
  /**
   * Class description here.
@@ -251,7 +251,7 @@
      ResultSet rs = null;
      try {
        Connection connection = store.get(id);
-       String grp = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID_KEY), getContext().getRuntimeArguments());
+       String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
        String updatedConnectionURL = addDelegationTokenUpdateURL(connection.getProp("url"), request);
        String dbname = connection.getProp("database");
@@ -262,7 +262,7 @@
        List<Row> rows = getRows(lines, rs);
 
        String identifier = ServiceUtils.generateMD5(table);
-       ws.createWorkspaceMeta(identifier, grp, table);
+       ws.createWorkspaceMeta(identifier, effectiveScope, table);
        ObjectSerDe<List<Row>> serDe = new ObjectSerDe<>();
        byte[] data = serDe.toByteArray(rows);
        ws.writeToWorkspace(identifier, WorkspaceDataset.DATA_COL, DataType.RECORDS, data);
@@ -452,9 +452,9 @@
        Utils.setTokenStr(ugi,getHiveServer2ClientToken(), HiveAuthFactory.HS2_CLIENT_TOKEN);
 
        // User impersonation
-       if (getContext().getRuntimeArguments().containsKey(ENABLE_USER_IMPERSONATION_CONFIG_KEY)
-               && getContext().getRuntimeArguments().get(ENABLE_USER_IMPERSONATION_CONFIG_KEY).equalsIgnoreCase("true")){
-         updatedJdbcURL.append(';').append(HiveAuthFactory.HS2_PROXY_USER).append('=').append(request.getHeader(USER_ID_KEY));
+       if (getContext().getRuntimeArguments().containsKey(USER_IMPERSONATION_ENABLED)
+               && getContext().getRuntimeArguments().get(USER_IMPERSONATION_ENABLED).equalsIgnoreCase("true")){
+         updatedJdbcURL.append(';').append(HiveAuthFactory.HS2_PROXY_USER).append('=').append(request.getHeader(USER_ID));
        }
      }
 
