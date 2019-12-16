@@ -4,7 +4,6 @@ The Data Prep Transform (Wrangler) accelerator is used to apply data transformat
 
 ## Plugin Configuration
 
-<<<<<<< Updated upstream
 The following table describes the fields as displayed in the accelerator properties dialog box.
 
 | Configuration Field | Required | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -14,16 +13,6 @@ The following table describes the fields as displayed in the accelerator propert
 For example, body.contains ("OCS") can be used to filter all records in which the body column contains the string "OCS". |
 | Directives          | Yes      | n/a     | All data manipulation commands to be executed by Wrangler. The Wrangler applies the specified directives to the input records and outputs the processed records in a new dataset.                                                                                                                                                                                                                                                                                                                            |
 | Failure Threshold   | No       | `1`     | Maximum number of errors tolerated before exiting the pipeline processing                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-=======
-asdsadhsadhafshgf
-
-| Configuration     | Required | Default | Description                                                                                                                                             |
-| ----------------- |:--------:|:-------:| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Input Field       | No       | `*`     | The name of the input field (or `*` for all fields)                                                                                                     |
-| Precondition      | No       | `false` | A filter (containing JEXL condition) to be applied on any of the input columns before a record is passed to data prep for applying wrangling directives |
-| Directives        | Yes      | n/a     | The series of data prep directives to be applied on the input records                                                                                   |
-| Failure Threshold | No       | `1`     | Maximum number of errors tolerated before exiting pipeline processing                                                                                   |
->>>>>>> Stashed changes
 
 ## Precondition filter
 
@@ -54,32 +43,14 @@ This will filter all records that contain `YCES` anywhere in their `body` column
 The Wrangler accelerator supports numerous directives and their variations. 
 These directives are available as commands as mentioned below in [Available Directives](#available-directoves).
 
-<<<<<<< Updated upstream
 ## Interractive Wrangling using DataPrep Service
 
 DataPrep service supports many row transformation directives which are actually executed by the Wrangler accelerator when you run your data pipeline. For interactively applying these directives, click `Pipelines` to display the DataPrep user interface (UI). Next, select the file that will load the desired data into DataPrep UI. After the data is loaded, you can see drop-downs for each column which provide options to perform simple data transformations, such as parse, data type, format, and calculate. Apply these directives to parse or transform the data until it looks good enough to proceed to attaching next stage. However, these drop-downs do not contain the complete list of transformation functions supported by Data Preparation. It is recommended to use the command console to avoid errors.
-=======
-## `Wrangler` Button - Interractive Wrangling using DataPrep Service
-
-DataPrep service supports many row transformation directives which are actually executed by this plugin 
-in the final pipeline.
-For interrcatively applying these directives, click on the `Wrangler` button provided in plugin widget UI
-which will open the DataPrep Service in your current Pipeline Canvas page context.
-Select the file that will load  the desired data into DataPrep UI. Now, apply these directives to parse or 
-transform the data until it looks good enough to proceed to attaching next plgin stage.
-
-These directives can be applied as shell commands by entering them through provided console interpreter at bottom 
-of DataPrep page. The result of directive is shown immediately after its executed by clicking enter. 
-Also, the command gets registered on right side of page under directives tab for a user to review or revert later on.
->>>>>>> Stashed changes
 
 Data Preparation provides a command console to help you run data transformation directives as shell commands. You can specify the directives at the command line and the results are shown immediately in the Data Preparation UI. The command console is visible at the bottom of the Preparation page. You can view all directives applied to your data on the `Directives` tab in the right panel.
 
-<<<<<<< Updated upstream
 Please find below the [DIRECTIVES CHEATSHEET](#directives-cheatsheet) to find mapping between the UI interractive column drop-down option and the corresponding directive command. Note that these UI options and commands have intuitive names to easily infer this mapping.
 
-=======
->>>>>>> Stashed changes
 ## Usage Notes
 
 All input record fields are made available to the Data Prep directives when `*` is used as the input field to be transformed. They are in the record in the same order as they appear.
@@ -92,11 +63,7 @@ Threshold_ is reached, then the pipeline will fail.
 
 ## Available Directives
 
-<<<<<<< Updated upstream
 The following directives are currently available which can be applied to your data records using Wrangler:
-=======
-These directives are currently available:
->>>>>>> Stashed changes
 
 | Directive                                                                            | Description                                                         |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
@@ -192,6 +159,8 @@ These directives are currently available:
 | [Types](wrangler-docs/functions/type-functions.md)                                   | Functions for detecting the type of data                            |
 
 ## Directives Cheatsheet
+
+The following list displays the mapping between the column drop-down options and the underlying directive command:
 
 | Name                      | Usage                                                                                                    | Description                                                                                                                                                       |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
