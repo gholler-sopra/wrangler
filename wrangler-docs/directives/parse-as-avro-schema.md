@@ -9,11 +9,9 @@ parse-as-avro-schema <schema> <json|binary>
 ```
 
 The `<column>` is the name of the column whoes values will be decoded using
-the schema defined in [Schema Registry](../service/schema-registry.md)
-registered with id `<schema-id>`. Optionally a specific `<version>` of
-registered schema can be specified.
+the provided schema.
 
 ## Usage Notes
 
-The PARSE-AS-XML directive efficiently parses and represents an XML document using an
-in-memory structure that can then be queried using other directives.
+The PARSE-AS-AVRO-SCHEMA directive efficiently parses and represents an avro message using an
+structure that can then be queried using other directives.
