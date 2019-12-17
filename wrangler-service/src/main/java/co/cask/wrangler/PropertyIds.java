@@ -100,4 +100,7 @@ public final class PropertyIds {
   
   // Success
   public static final String SUCCESS = "Success";
+  
+  //binary
+  public static final String BINARY = "binary";
 }

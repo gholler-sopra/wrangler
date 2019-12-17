@@ -102,8 +102,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   private static final Gson gson =
     new GsonBuilder().registerTypeAdapter(Schema.class, new SchemaTypeAdapter()).create();
   private Map<String, String> runtimeArgs;
-  private List<String> outputFields;
-  private String outputSchema;
+  private Schema outputSchema;
 
   @UseDataSet(WORKSPACE_DATASET)
   private WorkspaceDataset ws;
@@ -240,25 +239,22 @@ public final class KafkaService extends AbstractHttpServiceHandler {
         KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
         List<Row> recs = new ArrayList<>();
         boolean running = true;
-        generateSchema(config, connection.getAllProps().get(PropertyIds.FORMAT));
-        while(running) {
-          if (!Strings.isNullOrEmpty(connection.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && Formats.AVRO.equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT))) {
-            LOG.info("Reading avro data from topic: {} with schema registry url: {}", topic, connection.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
-            KafkaConsumer<byte[], Object> consumer = new KafkaConsumer<>(config.get());
-            FetchData<byte[], Object> fetchData = new FetchData<>(consumer);
-            recs = fetchData.fetchData(topic, lines);
-          } else if ("avro".equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT)) || "binary".equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT))) {
-            LOG.info("Reading avro/binary data from topic: {}", topic);
-            KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(config.get());
-            FetchData<byte[], byte[]> fetchData = new FetchData<>(consumer);
-            recs = fetchData.fetchData(topic, lines);
-          } else {
-            LOG.info("Reading text/json/csv data from topic: {}", topic);
-            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config.get());
-            FetchData<String, String> fetchData = new FetchData<>(consumer);
-            recs = fetchData.fetchData(topic, lines);
-          }
-          running = false;
+        outputSchema = generateSchema(config, connection.getAllProps().get(PropertyIds.FORMAT));
+        if (!Strings.isNullOrEmpty(connection.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && Formats.AVRO.equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT))) {
+          LOG.debug("Reading avro data from topic: {} with schema registry url: {}", topic, connection.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
+          KafkaConsumer<byte[], Object> consumer = new KafkaConsumer<>(config.get());
+          FetchData<byte[], Object> fetchData = new FetchData<>(consumer);
+          recs = fetchData.fetchData(topic, lines);
+        } else if ("avro".equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT)) || PropertyIds.BINARY.equalsIgnoreCase(connection.getAllProps().get(PropertyIds.FORMAT))) {
+          LOG.debug("Reading avro/binary data from topic: {}", topic);
+          KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(config.get());
+          FetchData<byte[], byte[]> fetchData = new FetchData<>(consumer);
+          recs = fetchData.fetchData(topic, lines);
+        } else {
+          LOG.debug("Reading text/json/csv data from topic: {}", topic);
+          KafkaConsumer<String, String> consumer = new KafkaConsumer<>(config.get());
+          FetchData<String, String> fetchData = new FetchData<>(consumer);
+          recs = fetchData.fetchData(topic, lines);
         }
 
         ObjectSerDe<List<Row>> serDe = new ObjectSerDe<>();
@@ -297,18 +293,12 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   
   
   
-  public void generateSchema(KafkaConfiguration config, String format) throws Exception {
+  public Schema generateSchema(KafkaConfiguration config, String format) throws Exception {
 	Properties properties = config.get();
-	if (!format.equalsIgnoreCase(Formats.AVRO) && !format.equalsIgnoreCase("binary")) {
-		outputFields = new ArrayList<>();
-		outputFields.add("body");
-		outputSchema = Format.TEXT.getSchema().toString();
-		return;
-	} else if ((format.equalsIgnoreCase(Formats.AVRO) && !properties.containsKey(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) || format.equalsIgnoreCase("binary")){
-		outputFields = new ArrayList<>();
-		outputFields.add("body");
-		outputSchema = Format.BLOB.getSchema().toString();
-		return;
+	if (!format.equalsIgnoreCase(Formats.AVRO) && !format.equalsIgnoreCase(PropertyIds.BINARY)) {
+		return Format.TEXT.getSchema();
+	} else if ((format.equalsIgnoreCase(Formats.AVRO) && !properties.containsKey(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) || format.equalsIgnoreCase(PropertyIds.BINARY)){
+		return Format.BLOB.getSchema();
 	}
     String schemaName = properties.getProperty(PropertyIds.SCHEMA_NAME);
     if (schemaName == null || schemaName.trim().isEmpty()) {
@@ -337,35 +327,23 @@ public final class KafkaService extends AbstractHttpServiceHandler {
        schemaString = KerberosHttpClient.sendKerberisedGetRequest(schemaRegistryUrl,
     		   principal, keytabLocation);
     }
-    parseSchemaString(schemaString);
+    return parseSchemaString(schemaString);
   }
 
-  private void parseSchemaString(String schemaString) {
-	    outputFields = new ArrayList<>();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("type", "record");
-        jsonObject.addProperty("name", "etlSchemaBody");
-        JsonArray fields = new JsonArray();
-	    Config config = ConfigFactory.parseString(schemaString);
-	    if (config.hasPath("schemaText")) {
-	      try {
-	        List<Schema.Field> schemaFields = Schema.parseJson(config.getString("schemaText")).getFields();
-	        for (Schema.Field schemaField: schemaFields) {
-	        	outputFields.add(schemaField.getName());
-	            JsonObject column = new JsonObject();
-	            column.addProperty("name", schemaField.getName());
-	            column.addProperty("type", "string");
-	        	fields.add(column);
-	        }
-	        jsonObject.add("fields", fields);
-	        outputSchema = jsonObject.toString();
-	      } catch (IOException e) {
-	        LOG.error(e.getMessage(), e);
-	      }
-	    } else {
-	      LOG.error("'schemaText' is not present in schema json.");
-	    }
+  private Schema parseSchemaString(String schemaString) throws IOException {
+    Config config = ConfigFactory.parseString(schemaString);
+    if (config.hasPath("schemaText")) {
+      try {
+        List<Schema.Field> schemaFields = Schema.parseJson(config.getString("schemaText")).getFields();
+        return Schema.recordOf("etlSchemaBody", schemaFields);
+      } catch (IOException e) {
+    	LOG.error(e.getMessage(), e);
+    	throw e;
 	  }
+	} else {
+	  throw new IllegalStateException("'schemaText' is not present in schema json.");
+	}
+  }
   
   /**
    * Specification for the source.
@@ -381,6 +359,7 @@ public final class KafkaService extends AbstractHttpServiceHandler {
                             @PathParam("id") String id, @PathParam("topic") final String topic) {
     JsonObject response = new JsonObject();
     String format = Formats.TEXT;
+    
     try {
       Connection conn = store.get(id);
       JsonObject value = new JsonObject();
@@ -405,18 +384,18 @@ public final class KafkaService extends AbstractHttpServiceHandler {
     	  Map<String, String> kafkaProducerProperties = gson.fromJson(conn.getAllProps().get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
     	  properties.put(PropertyIds.KAFKA_PROPERTIES, Joiner.on(",").withKeyValueSeparator(":").join(kafkaProducerProperties));
       }
-      generateSchema(new KafkaConfiguration(conn, runtimeArgs), conn.getAllProps().get(PropertyIds.FORMAT));
-      
-      if (conn.getAllProps().containsKey(PropertyIds.FORMAT) && Arrays.asList("binary", Formats.AVRO).contains(conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase())) {
-        format = conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase();
-      }
+      outputSchema = generateSchema(new KafkaConfiguration(conn, runtimeArgs), conn.getAllProps().get(PropertyIds.FORMAT));
       
       if (format.equalsIgnoreCase(Formats.AVRO) && !Strings.isNullOrEmpty(conn.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()))) {
     	  properties.put("schemaRegistryUrl", conn.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
     	  properties.put("schemaName", conn.getAllProps().getOrDefault(PropertyIds.SCHEMA_NAME, topic));
       }
       
-      properties.put("schema", outputSchema);
+      if (conn.getAllProps().containsKey(PropertyIds.FORMAT) && Arrays.asList(PropertyIds.BINARY, Formats.AVRO).contains(conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase())) {
+          format = conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase();
+      }
+      
+      properties.put("schema", outputSchema.toString());
       properties.put(PropertyIds.FORMAT, format);
       kafka.addProperty(PropertyIds.NAME, "Kafka");
       kafka.addProperty("type", "source");
@@ -438,73 +417,77 @@ public final class KafkaService extends AbstractHttpServiceHandler {
   
   class FetchData<K, V> {
 
-	  KafkaConsumer<K, V> consumer;
+    KafkaConsumer<K, V> consumer;
 
-	  FetchData(KafkaConsumer<K, V> consumer) {
-		  this.consumer = consumer;
-	  }
+	FetchData(KafkaConsumer<K, V> consumer) {
+      this.consumer = consumer;
+    }
 
-	  public List<Row> fetchData(String topic, Integer count) throws Exception {
-		  List<Row> recs = new ArrayList<>();
-		  consumer.subscribe(Lists.newArrayList(topic));
-		  try {
-			  ConsumerRecords<K, V> records = consumer.poll(10000);
-			  LOG.debug("Record count received is: {}", records.count());
-			  for (ConsumerRecord<K, V> record : records) {
-				  Row rec = new Row();
-				  V value = record.value();
-				  if (value instanceof GenericRecord) {
-					  parseAvroRecord(rec, value);
-				  } else {
-					  rec.add(outputFields.get(0), value);
-				  }
+	public List<Row> fetchData(String topic, Integer count) throws Exception {
+      List<Row> recs = new ArrayList<>();
+      consumer.subscribe(Lists.newArrayList(topic));
+      try {
+        ConsumerRecords<K, V> records = consumer.poll(10000);
+        LOG.debug("Record count received is: {}", records.count());
+        List<String> outputFields = new ArrayList<>();
+        for (co.cask.cdap.api.data.schema.Schema.Field field: outputSchema.getFields()) {
+          outputFields.add(field.getName());
+        }
+        for (ConsumerRecord<K, V> record : records) {
+          Row rec = new Row();
+          V value = record.value();
+          if (value instanceof GenericRecord) {
+            parseAvroRecord(rec, value, outputFields);
+          } else {
+            rec.add(outputFields.get(0), value);
+          }
 
-				  recs.add(rec);
-				  if (count < 0) {
-					  break;
-				  }
-				  count--;
-			  }
-		  } catch (Exception e) {
-			  LOG.error("Exception while reading data from topic {}, {}", topic, e.getMessage());
-			  throw e;
-		  } finally {
-			  consumer.close();
-		  }
-		  return recs;
-	  }
+          recs.add(rec);
+          if (count < 0) {
+            break;
+          }
+          count--;
+        }
+      } catch (Exception e) {
+        LOG.error("Exception while reading data from topic {}, {}", topic, e.getMessage());
+        throw e;
+      } finally {
+        consumer.close();
+      }
+      return recs;
+	}
 
-	  private void parseAvroRecord(Row rec, V value) {
-		  GenericRecord messageRecord = (GenericRecord) value;
-		  List<Field> fields = messageRecord.getSchema().getFields();
-		  for (Field field : fields) {
-			  String fieldName = field.name();
+    private void parseAvroRecord(Row rec, V value, List<String> outputFields) {
+      GenericRecord messageRecord = (GenericRecord) value;
+      List<Field> fields = messageRecord.getSchema().getFields();
+      for (Field field : fields) {
+        String fieldName = field.name();
 
-			  if (outputFields.contains(fieldName)) {
-				  Object fieldValue = messageRecord.get(fieldName);
-				  // In case of String values it was observed that sometimes
-				  // value from kafka
-				  // comes as type Utf8 which is not a serializable class.
-				  // Convert this to string in the
-				  // builder
-				  if (fieldValue instanceof org.apache.avro.util.Utf8) {
-					  fieldValue = ((org.apache.avro.util.Utf8) fieldValue).toString();
-				  } else if (fieldValue instanceof GenericData.Array) {
-					  parseArray(fieldValue);
-				  }
-				  rec.add(fieldName, fieldValue);
-			  }
-		  }
-	  }
+        if (outputFields.contains(fieldName)) {
+          Object fieldValue = messageRecord.get(fieldName);
+          // In case of String values it was observed that sometimes
+          // value from kafka
+          // comes as type Utf8 which is not a serializable class.
+          // Convert this to string in the
+          // builder
+          if (fieldValue instanceof org.apache.avro.util.Utf8) {
+            fieldValue = ((org.apache.avro.util.Utf8) fieldValue).toString();
+          } else if (fieldValue instanceof GenericData.Array) {
+        	parseArray(fieldValue);
+          }
+          rec.add(fieldName, fieldValue);
+        }
+      }
+    }
 
-	  private void parseArray(Object fieldValue) {
-		  GenericData.Array arrData = (GenericData.Array) fieldValue;
-		  if (arrData.isEmpty() && arrData.get(0) instanceof org.apache.avro.util.Utf8) {
-			  for (int i = 0; i < arrData.size(); i++) {
-				  String newArrayType = ((org.apache.avro.util.Utf8) arrData.get(i)).toString();
-				  arrData.set(i, newArrayType);
-			  }
-		  }
-	  }
+    private void parseArray(Object fieldValue) {
+      GenericData.Array arrData = (GenericData.Array) fieldValue;
+      if (!arrData.isEmpty() && arrData.get(0) instanceof org.apache.avro.util.Utf8) {
+        for (int i = 0; i < arrData.size(); i++) {
+          String newArrayType = ((org.apache.avro.util.Utf8) arrData.get(i)).toString();
+          arrData.set(i, newArrayType);
+        }
+      }
+    }
   }
 }

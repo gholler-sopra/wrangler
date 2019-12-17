@@ -97,13 +97,13 @@ public final class KafkaConfiguration {
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
     props.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "true"));
     props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "15000"));
-    if (!Strings.isNullOrEmpty(properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && "avro".equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
+    if (!Strings.isNullOrEmpty(properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && Formats.AVRO.equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
     	keyDeserializer = ByteArrayDeserializer.class.getCanonicalName();
     	valueDeserializer = KafkaAvroDeserializer.class.getCanonicalName();
     	props.setProperty(PropertyIds.SCHEMA_NAME, properties.getOrDefault(PropertyIds.SCHEMA_NAME, properties.get(PropertyIds.TOPIC)));
     	props.put(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name(), properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
     	LOG.info("Schema Registry is provided, picking up provided URL as: {}", properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
-    } else if ("binary".equalsIgnoreCase(properties.get(PropertyIds.FORMAT)) || "avro".equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
+    } else if (PropertyIds.BINARY.equalsIgnoreCase(properties.get(PropertyIds.FORMAT)) || Formats.AVRO.equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
     	keyDeserializer = ByteArrayDeserializer.class.getCanonicalName();
     	valueDeserializer = ByteArrayDeserializer.class.getCanonicalName();
     }
@@ -115,14 +115,22 @@ public final class KafkaConfiguration {
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
     
     keytabLocation = properties.get(PropertyIds.KEYTAB_LOCATION);
-    if (Strings.isNullOrEmpty(keytabLocation) && runtimeArgs.containsKey(PropertyIds.NAMESPACE_KETAB_PATH)) {
-    	String[] arr = runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH).split("/");
-    	keytabLocation = "./" + arr[arr.length - 1];
-    }
     principal = properties.get(PropertyIds.PRINCIPAL);
-    if (Strings.isNullOrEmpty(principal)) {
-    	principal = runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME);
+    if (Strings.isNullOrEmpty(keytabLocation) ^ Strings.isNullOrEmpty(principal)) {
+    	throw new IllegalArgumentException("Please specify either both principal and keytab or none.");
     }
+    
+    if (Strings.isNullOrEmpty(keytabLocation)) {
+    	keytabLocation = runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH);
+    	principal = runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME);
+        if (Strings.isNullOrEmpty(keytabLocation) ^ Strings.isNullOrEmpty(principal)) {
+        	throw new IllegalArgumentException("Please specify either both namespace principal and namespace keytab or none.");
+        } else {
+        	String[] arr = runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH).split("/");
+        	keytabLocation = "./" + arr[arr.length - 1];
+        }
+    }
+    
 	//Kerberized environment, need to pass kerberos params
     if(keytabLocation != null && !"".equals(keytabLocation) && principal != null && !"".equals(principal)) {
 		

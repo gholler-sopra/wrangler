@@ -24,8 +24,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-
 import co.cask.cdap.api.annotation.Description;
 import co.cask.cdap.api.annotation.Name;
 import co.cask.cdap.api.data.format.FormatSpecification;
@@ -47,8 +45,6 @@ import co.cask.wrangler.api.parser.ColumnName;
 import co.cask.wrangler.api.parser.Text;
 import co.cask.wrangler.api.parser.TokenType;
 import co.cask.wrangler.api.parser.UsageDefinition;
-import co.cask.wrangler.clients.SchemaRegistryClient;
-import co.cask.wrangler.codec.Decoder;
 
 /**
  * A step to parse AVRO json or binary format.
@@ -62,11 +58,6 @@ public class ParseAvroSchema implements Directive {
   private static final Logger LOG = LoggerFactory.getLogger(ParseAvroSchema.class);
   private String column;
   private String schemaJson;
-  private boolean decoderInitialized = false;
-  private Gson gson;
-  private Schema schema;
-  private transient FormatSpecification spec;
-  private transient RecordFormat<StreamEvent, StructuredRecord> recordFormat;
 
   @Override
   public UsageDefinition define() {
@@ -81,7 +72,6 @@ public class ParseAvroSchema implements Directive {
     this.column = ((ColumnName) args.value("column")).value();
     this.schemaJson = ((Text) args.value("schema")).value();
     LOG.info("Schema Json: {}", schemaJson);
-    gson = new Gson();
   }
 
   @Override
@@ -93,40 +83,38 @@ public class ParseAvroSchema implements Directive {
   public List<Row> execute(List<Row> rows, final ExecutorContext context)
     throws DirectiveExecutionException, ErrorRowException {
     List<Row> results = new ArrayList<>();
-
-    if (!decoderInitialized) {
-      // Retryer callable, that allows this step attempt to connect to schema registry service
-      // before giving up.
-    	try {
+    Schema schema;
+    FormatSpecification spec;
+    RecordFormat<StreamEvent, StructuredRecord> recordFormat;
+    try {
     	schema = Schema.parseJson(schemaJson);
     	spec = new FormatSpecification(Formats.AVRO, schema, new HashMap<String, String>());
     	recordFormat = RecordFormats.createInitializedFormat(spec);
-      } catch (Exception e) {
-    	  LOG.error("Exception in decoderInitialized.", e);
-    	  throw new DirectiveExecutionException(e);
-      } 
-    }
+    } catch (Exception e) {
+    	LOG.error("Exception in decoderInitialized.", e);
+    	throw new DirectiveExecutionException(e);
+    } 
 
     try {
         for (Row row : rows) {
           int idx = row.find(column);
-          if (idx != -1) {
-            Object object = row.getValue(idx);
-            Row row1 = new Row();
-            if (object instanceof byte[]) {
-              byte[] bytes = (byte[]) object;
-              StructuredRecord messageRecord = recordFormat.read(new StreamEvent(ByteBuffer.wrap(bytes)));
-              for (Schema.Field field : messageRecord.getSchema().getFields()) {
-                  String fieldName = field.getName();
-                  row1.add(fieldName, messageRecord.get(fieldName));
-                }
-              results.add(row1);
-            } else {
-              LOG.error("Data in column: {} not byte array", column);
-              throw new ErrorRowException(
-                toString() + " : column " + column + " should be of type byte array", 1
-              );
+          if (idx == -1) {
+        	  continue;
+          }
+          Object object = row.getValue(idx);
+          Row row1 = new Row();
+          if (object instanceof byte[]) {
+            byte[] bytes = (byte[]) object;
+            StructuredRecord messageRecord = recordFormat.read(new StreamEvent(ByteBuffer.wrap(bytes)));
+            for (Schema.Field field : messageRecord.getSchema().getFields()) {
+                String fieldName = field.getName();
+                row1.add(fieldName, messageRecord.get(fieldName));
             }
+            results.add(row1);
+          } else {
+            LOG.error("Data in column: {} not byte array", column);
+            throw new ErrorRowException(
+              toString() + " : column " + column + " should be of type byte array", 1);
           }
         }
       } catch (Exception e) {
