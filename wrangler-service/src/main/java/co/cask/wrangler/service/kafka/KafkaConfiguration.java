@@ -19,9 +19,7 @@ package co.cask.wrangler.service.kafka;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -35,10 +33,14 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.hortonworks.registries.schemaregistry.client.SchemaRegistryClient;
+import com.hortonworks.registries.schemaregistry.serdes.avro.kafka.KafkaAvroDeserializer;
 
+import co.cask.cdap.api.data.format.Formats;
 import co.cask.wrangler.PropertyIds;
 import co.cask.wrangler.dataset.connections.Connection;
 import co.cask.wrangler.service.connections.ConnectionType;
@@ -52,21 +54,21 @@ public final class KafkaConfiguration {
   private final String connection;
   private final Properties props;
   private static final Gson gson = new GsonBuilder().create();
+  private Map<String, String> kafkaProducerProperties;
 
   private String keyDeserializer;
   private String valueDeserializer;
   private String autoOffsetReset;
-  private String excludeInternalTopic;
+  private String keytabLocation;
+  private String principal;
   
   public KafkaConfiguration(Connection conn, Map<String, String> runtimeArgs) {
-    excludeInternalTopic = "true";
     
     if (conn.getType() != ConnectionType.KAFKA) {
       throw new IllegalArgumentException(
         String.format("Connection id '%s', name '%s' is not a Kafka configuration.", conn.getId(), conn.getName())
       );
     }
-    
     Map<String, String> properties = conn.getAllProps();
     if(properties == null || properties.size() == 0) {
       throw new IllegalArgumentException("Kafka properties are not defined. Check connection setting.");
@@ -78,14 +80,14 @@ public final class KafkaConfiguration {
       throw new IllegalArgumentException("Kafka Brokers not defined.");
     }
 
-    Map<String, String> kafkaProducerProperties = new HashMap<>();
+    kafkaProducerProperties = new HashMap<>();
     if (properties.containsKey(PropertyIds.KAFAK_PRODUCER_PROPERTIES)) {
     	Type type = new TypeToken<HashMap<String, String>>(){}.getType();
     	kafkaProducerProperties = gson.fromJson(properties.get(PropertyIds.KAFAK_PRODUCER_PROPERTIES), type);
     }
     
-    keyDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
-    valueDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+    keyDeserializer = StringDeserializer.class.getCanonicalName();
+    valueDeserializer = StringDeserializer.class.getCanonicalName();
     
     props = new Properties();
     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, connection);
@@ -95,10 +97,32 @@ public final class KafkaConfiguration {
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
     props.put(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "true"));
     props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProducerProperties.getOrDefault(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "15000"));
+    if (!Strings.isNullOrEmpty(properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && "avro".equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
+    	keyDeserializer = ByteArrayDeserializer.class.getCanonicalName();
+    	valueDeserializer = KafkaAvroDeserializer.class.getCanonicalName();
+    	props.setProperty(PropertyIds.SCHEMA_NAME, properties.getOrDefault(PropertyIds.SCHEMA_NAME, properties.get(PropertyIds.TOPIC)));
+    	props.put(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name(), properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
+    	LOG.info("Schema Registry is provided, picking up provided URL as: {}", properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
+    } else if ("binary".equalsIgnoreCase(properties.get(PropertyIds.FORMAT)) || "avro".equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
+    	keyDeserializer = ByteArrayDeserializer.class.getCanonicalName();
+    	valueDeserializer = ByteArrayDeserializer.class.getCanonicalName();
+    }
     
-    String keytabLocation = properties.getOrDefault(PropertyIds.KEYTAB_LOCATION, runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH));
-    String principal = properties.getOrDefault(PropertyIds.PRINCIPAL, runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME));
-
+    keyDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer);
+    valueDeserializer = kafkaProducerProperties.getOrDefault(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
+    
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer);
+    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
+    
+    keytabLocation = properties.get(PropertyIds.KEYTAB_LOCATION);
+    if (Strings.isNullOrEmpty(keytabLocation) && runtimeArgs.containsKey(PropertyIds.NAMESPACE_KETAB_PATH)) {
+    	String[] arr = runtimeArgs.get(PropertyIds.NAMESPACE_KETAB_PATH).split("/");
+    	keytabLocation = "./" + arr[arr.length - 1];
+    }
+    principal = properties.get(PropertyIds.PRINCIPAL);
+    if (Strings.isNullOrEmpty(principal)) {
+    	principal = runtimeArgs.get(PropertyIds.NAMESPACE_PRINCIPAL_NAME);
+    }
 	//Kerberized environment, need to pass kerberos params
     if(keytabLocation != null && !"".equals(keytabLocation) && principal != null && !"".equals(principal)) {
 		
@@ -122,11 +146,35 @@ public final class KafkaConfiguration {
 				"        keyTab=\"%s\" \n" +
 				"        principal=\"%s\";",
 				keytabLocation, principal));
+        if (!Strings.isNullOrEmpty(properties.get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name())) && Formats.AVRO.equalsIgnoreCase(properties.get(PropertyIds.FORMAT))) {
+        	props.put(SchemaRegistryClient.Configuration.SASL_JAAS_CONFIG.name(), String.format("com.sun.security.auth.module.Krb5LoginModule required \n" +
+        			"        useKeyTab=true \n" +
+        			"        storeKey=true  \n" +
+        			"        useTicketCache=false  \n" +
+        			"        keyTab=\"%s\" \n" +
+        			"        principal=\"%s\";",
+        			keytabLocation, principal));
+        }
 	}
 	
 	props.forEach((k,v)->LOG.debug("Item : {}, Value :  {}", k, v));
   }
   
+  
+  /**
+   * @return keytab location
+   */
+  public String getKeytabLocation() {
+	return keytabLocation;
+  }
+
+  /**
+   * @return Principal
+   */
+  public String getPrincipal() {
+	return principal;
+  }
+
   /**
    * @return String representation of key deserializer of kafka topic.
    */
@@ -139,6 +187,14 @@ public final class KafkaConfiguration {
    */
   public String getValueDeserializer() {
     return valueDeserializer;
+  }
+  
+  
+  /**
+   * @return Map of extra kafka properties passed from UI
+   */
+  public Map<String, String> getKafkaProducerProperties() {
+	return kafkaProducerProperties;
   }
 
   private String deserialize(String type) {

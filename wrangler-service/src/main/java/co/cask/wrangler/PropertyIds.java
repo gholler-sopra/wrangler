@@ -82,4 +82,22 @@ public final class PropertyIds {
   
   // Namespace reference principal
   public static final String NAMESPACE_PRINCIPAL_NAME = "pipeline.principal.name";
+  
+  // Schema registry name
+  public static final String SCHEMA_NAME = "schema.name";
+  
+  // Values to be passed to UI
+  public static final String VALUES = "values";
+  
+  // Response status
+  public static final String STATUS = "status";
+  
+  // Message
+  public static final String MESSAGE = "message";
+  
+  // Count of records
+  public static final String COUNT = "count";
+  
+  // Success
+  public static final String SUCCESS = "Success";
 }
