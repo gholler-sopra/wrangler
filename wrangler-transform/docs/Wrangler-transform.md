@@ -91,6 +91,7 @@ These directives are currently available:
 | **Parsers**                                                            |                                                                  |
 | [JSON Path](wrangler-docs/directives/json-path.md)                              | Uses a DSL (a JSON path expression) for parsing JSON records     |
 | [Parse as AVRO](wrangler-docs/directives/parse-as-avro.md)                      | Parsing an AVRO encoded message - either as binary or json       |
+| [Parse as AVRO Schema](wrangler-docs/directives/parse-as-avro-schema.md)        | Parsing an AVRO encoded message with provided schema             |
 | [Parse as AVRO File](wrangler-docs/directives/parse-as-avro-file.md)            | Parsing an AVRO data file                                        |
 | [Parse as CSV](wrangler-docs/directives/parse-as-csv.md)                        | Parsing an input record as comma-separated values                |
 | [Parse as Date](wrangler-docs/directives/parse-as-date.md)                      | Parsing dates using natural language processing                  |
@@ -201,6 +202,7 @@ These directives are currently available:
 |FIND-AND-REPLACE|find-and-replace &lt;column&gt; &lt;sed-expression&gt;|Finds and replaces text in column values using a sed-format expression.|
 |RENAME|rename &lt;old&gt; &lt;new&gt;|Renames an existing column.|
 |PARSE-AS-AVRO|parse-as-avro &lt;column&gt; &lt;schema-id&gt; &lt;json|binary&gt; [version]|Parses column as AVRO generic record.|
+|PARSE-AS-AVRO-SCHEMA|parse-as-avro &lt;column&gt; &lt;schema&gt|Parses column as AVRO generic record.|
 |FILL-NULL-OR-EMPTY|fill-null-or-empty &lt;column&gt; &lt;fixed-value&gt;|Fills a value of a column with a fixed value if it is either null or empty.|
 |SET-TYPE|set-type &lt;column&gt; &lt;type&gt;|Converting data type of a column.|
 |RTRIM|rtrim &lt;column&gt;|Trimming whitespace from right side of a string.|
