@@ -98,4 +98,25 @@ public final class PropertyIds {
     public static final String HIVE_REMOVE_TABLENAME_FROM_COLUMN_NAME_CONFIG_KEY = "hive.resultset.use.unique.column.names";
   }
 
+  // Schema registry name
+  public static final String SCHEMA_NAME = "schema.name";
+
+  // Values to be passed to UI
+  public static final String VALUES = "values";
+
+  // Response status
+  public static final String STATUS = "status";
+
+  // Message
+  public static final String MESSAGE = "message";
+
+  // Count of records
+  public static final String COUNT = "count";
+
+  // Success
+  public static final String SUCCESS = "Success";
+
+  //binary
+  public static final String BINARY = "binary";
+
 }
