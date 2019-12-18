@@ -32,6 +32,11 @@
       <version>${guava.version}</version>
     </dependency>
     <dependency>
+      <groupId>co.cask.cdap</groupId>
+      <artifactId>cdap-formats</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency>
       <groupId>co.cask.wrangler</groupId>
       <artifactId>wrangler-api</artifactId>
       <version>${project.version}</version>

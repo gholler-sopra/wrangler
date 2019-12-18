@@ -352,6 +352,14 @@ public final class MigrateToV2 implements GrammarMigrator {
         }
         break;
 
+        // parse-as-avro-schema <column> <schema>
+        case "parse-as-avro-schema" : {
+          String column = getNextToken(tokenizer, command, "column", lineno);
+          String schema = getNextToken(tokenizer, command, "schema", lineno);
+          transformed.add(String.format("parse-as-avro-schema %s %s;", col(column), schema));
+        }
+        break;
+
         // parse-as-protobuf <column> <schema-id> <record-name> [version]
         case "parse-as-protobuf" : {
           String column = getNextToken(tokenizer, command, "column", lineno);
