@@ -1,29 +1,23 @@
 # Data Prep Transform
 
-This plugin applies data transformation directives on your data records. The directives
-are generated either through an interactive user interface or by manual entry into the
-plugin.
+The Data Prep Transform (Wrangler) accelerator is used to apply data transformation directives to your data records. The directives can be applied either through the Data Preparation visual interface or by manually configuring the Wrangler accelerator and specifyin the required directives to perform data transformations.
 
 ## Plugin Configuration
 
 | Configuration     | Required | Default | Description                                                           |
 | ----------------- | :------: | :-----: | --------------------------------------------------------------------- |
-| Input Field       | No       | `*`     | The name of the input field (or `*` for all fields)                   |
+| Input Field       | No       | `*`     | The name of the input field(s) on which the directives must be run. (`*` for all fields)                   |
 | Precondition      | No       | `false` | A filter (containing JEXL condition) to be applied on any of the input columns before a record is passed to data prep for applying wrangling directives        |
 | Directives        | Yes      | n/a     | The series of data prep directives to be applied on the input records |
 | Failure Threshold | No       | `1`     | Maximum number of errors tolerated before exiting pipeline processing |
 
 ## Precondition filter
 
-A `precondition` filter is useful to apply filtering on records before the records are
-delivered for data prep. 
+The `precondition` filter performs filtering on your data records before delivering these records for data preparation.
 
-To filter a record, specify a condition that will result in boolean state of `true`.
-The condition can be specified using `JEXL` expression which
-when evaluated to `true` filters `out` i.e. remove such records.
+You need to specify a filter condition as a `JEXL` expression. If this filter condition is evaluated to `true` for a record, the Wrangler removes the specific record from the list of data records to be transformed.
 
-For example, to filter out all records that are a header record from a CSV file where the
-header record is at the start of the file, you could use this filter:
+For example, to filter all header records from a CSV file where the header record is at the start of the file, you need to specify the following filter condition:
 
 ```
   offset == 0
@@ -31,14 +25,14 @@ header record is at the start of the file, you could use this filter:
 
 This will filter out records that have an `offset` of zero.
 
-Another example is where user may want to filter out input records containing a substring 
-"YCES" in any of the records, in such case following filter may be used :
+Another example is where a user may want to filter out input records containing a substring 
+"YCES" in any of the records. In such case, the following filter may be used :
 
 ```
   body.contains("YCES")
 ```
 
-This will filter out records that contains `YCES` anywhere in the body column from previous plugin stage.
+This will filter all records that contain "YCES" anywhere in their `body` column.
 
 ## Directives
 
@@ -49,7 +43,7 @@ These directives are available as commands as mentioned below in [Available Dire
 ## `Wrangler` Button - Interractive Wrangling using DataPrep Service 
 
 DataPrep service supports many row transformation directives which are actually executed by this plugin 
-in the final pipeline.
+in the final pipeline. 
 For interrcatively applying these directives, click on the `Wrangler` button provided in plugin widget UI
 which will open the DataPrep Service in your current Pipeline Canvas page context.
 Select the file that will load  the desired data into DataPrep UI. Now, apply these directives to parse or 
@@ -62,9 +56,7 @@ Also, the command gets registered on right side of page under directives tab for
 Please note that many (and NOT all) of these directives can also be applied using drop-down option available before 
 each column name from DataPrep UI itself. Wherever not clear, please apply directive using command console.
 
-Please also find below the [DIRECTIVES CHEATSHEET](#directives-cheatsheet) to find mapping between the UI interractive drop-down option and 
-corresponding directive command. However, note that these UI options and commands have very intuitive names to 
-auto-infer the relation.
+Please also find below the [DIRECTIVES CHEATSHEET](#directives-cheatsheet) to find mapping between the UI interractive drop-down option and the corresponding directive command. Note that these UI options and commands have intuitive names to easily infer this mapping.
 
 
 ## Usage Notes
@@ -72,7 +64,7 @@ auto-infer the relation.
 All input record fields are made available to the data prep directives when `*` is used as
 the field to be data prepped. They are in the record in the same order as they appear.
 
-Note that if the transform doesn't operate on all of the input record fields or a field is
+Note that if the transform does not operate on all of the input record fields or a field is
 not configured as part of the output schema, and you are using the `set columns`
 directive, you may see inconsistent behavior. Use the `drop` directive to drop any fields
 that are not used in the data prep.
