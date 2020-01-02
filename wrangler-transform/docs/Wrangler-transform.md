@@ -78,8 +78,8 @@ Threshold_ is reached, then the pipeline will fail.
 
 These directives are currently available:
 
-| Directive                                                              | Description                                                      |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Directive                               | Description                                                      |
+| --------------------------------------- | ---------------------------------------------------------------- |
 | **Parsers**                                                            |                                                                  |
 | JSON Path                              | Uses a DSL (a JSON path expression) for parsing JSON records     |
 | Parse as AVRO                      | Parsing an AVRO encoded message - either as binary or json       |
