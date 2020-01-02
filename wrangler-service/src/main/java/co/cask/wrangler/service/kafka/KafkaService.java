@@ -386,13 +386,13 @@ public final class KafkaService extends AbstractHttpServiceHandler {
       }
       outputSchema = generateSchema(new KafkaConfiguration(conn, runtimeArgs), conn.getAllProps().get(PropertyIds.FORMAT));
       
+      if (conn.getAllProps().containsKey(PropertyIds.FORMAT)) {
+    	  format = conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase();
+      }
+      
       if (format.equalsIgnoreCase(Formats.AVRO) && !Strings.isNullOrEmpty(conn.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()))) {
     	  properties.put("schemaRegistryUrl", conn.getAllProps().get(SchemaRegistryClient.Configuration.SCHEMA_REGISTRY_URL.name()));
     	  properties.put("schemaName", conn.getAllProps().getOrDefault(PropertyIds.SCHEMA_NAME, topic));
-      }
-      
-      if (conn.getAllProps().containsKey(PropertyIds.FORMAT) && Arrays.asList(PropertyIds.BINARY, Formats.AVRO).contains(conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase())) {
-          format = conn.getAllProps().get(PropertyIds.FORMAT).toLowerCase();
       }
       
       properties.put("schema", outputSchema.toString());
