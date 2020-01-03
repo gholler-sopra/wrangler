@@ -78,6 +78,9 @@ Threshold_ is reached, then the pipeline will fail.
 
 These directives are currently available: 
 
+**Note:** To know more about below supported directives please refer open source documentation `https://github.com/data-integrations/wrangler/tree/release/4.1/wrangler-docs/directives`
+
+
 | Directive                               | Description                                                      |
 | --------------------------------------- | ---------------------------------------------------------------- |
 | **Parsers**                                                            |                                                                  |
@@ -171,9 +174,6 @@ These directives are currently available:
 | DDL                                 | Functions that can manipulate definition of data                 |
 | JSON                               | Functions that can be useful in transforming your data           |
 | Types                              | Functions for detecting the type of data                         |
-
-**Note:** To know more about above supported directives refer `https://github.com/data-integrations/wrangler/tree/release/4.1/wrangler-docs/directives`
-
 
 ## Directives Cheatsheet
 
