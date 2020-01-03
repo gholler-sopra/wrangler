@@ -39,12 +39,16 @@ import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -123,8 +127,9 @@ public class ParseExcel implements Directive {
 
           if (bytes != null) {
             input = new ByteArrayInputStream(bytes);
-            XSSFWorkbook book = new XSSFWorkbook(input);
-            XSSFSheet excelsheet;
+            Workbook book = WorkbookFactory.create(input);
+            FormulaEvaluator evaluator = book.getCreationHelper().createFormulaEvaluator();
+            Sheet excelsheet;
             if (Types.isInteger(sheet)) {
               excelsheet = book.getSheetAt(Integer.parseInt(sheet));
             } else {
@@ -193,6 +198,10 @@ public class ParseExcel implements Directive {
                     }
                     value = String.valueOf(cell.getBooleanCellValue());
                     break;
+                  case FORMULA:
+                	CellValue cellValue = evaluator.evaluate(cell);
+                	value = getFormulaValue(cellValue, newRow, name, cell);
+                	break;
                 }
 
                 if (rows == 0 && firstRowAsHeader) {
@@ -234,7 +243,7 @@ public class ParseExcel implements Directive {
       if (cellValue == null) {
         return null;
       }
-      
+
 	  switch (cellValue.getCellTypeEnum()) {
       case STRING:
         newRow.add(name, cellValue.getStringValue());
