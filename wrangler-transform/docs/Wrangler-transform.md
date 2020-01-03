@@ -230,7 +230,7 @@ These directives are currently available:
 |SPLIT-URL|split-url &lt;column&gt;|Split a url into it's components host,protocol,port,etc.|
 |FORMAT-DATE|format-date &lt;column&gt; &lt;format&gt;|Formats a column using a date-time format. Use 'parse-as-date` beforehand.|
 |QUANTIZE|quantize &lt;source&gt; &lt;destination&gt; &lt;[range1:range2)=value&gt;,[&lt;range1:range2=value&gt;]*|Quanitize the range of numbers into label values.|
-|PARSE-AS-EXCEL|parse-as-excel &lt;column&gt; [&lt;sheet number | sheet name&gt;]|Parses column as Excel file.|
+|PARSE-AS-EXCEL|parse-as-excel &lt;column&gt; [&lt;sheet number | sheet name&gt;] [first-row-as-header]|Parses column as Excel file.|
 |PARSE-AS-DATE|parse-as-date &lt;column&gt; [&lt;timezone&gt;]|Parses column values as dates using natural language processing and automatically identifying the format (expensive in terms of time consumed).|
 |TABLE-LOOKUP|table-lookup &lt;column&gt; &lt;table&gt;|Uses the given column as a key to perform a lookup into the specified table.|
 |FILTER-ROWS-ON|filter-rows-on empty-or-null-columns &lt;column&gt;[,&lt;column&gt;*]|Filters row that have empty or null columns.|
