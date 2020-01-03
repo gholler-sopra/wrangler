@@ -45,7 +45,7 @@ import java.util.List;
  *   the plugin framework.
  * </p>
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name("parse-as-xml")
 @Categories(categories = { "xml"})
 @Description("Parses a column as XML.")
