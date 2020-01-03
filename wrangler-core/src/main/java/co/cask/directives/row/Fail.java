@@ -41,7 +41,7 @@ import java.util.Set;
 /**
  * A directive for erroring the processing if condition is set to true.
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(Fail.NAME)
 @Categories(categories = { "row", "data-quality"})
 @Description("Fails when the condition is evaluated to true.")

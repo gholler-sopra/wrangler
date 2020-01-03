@@ -46,7 +46,7 @@ import java.util.Set;
  * The value set as transient variable is available to all the directives after that. But, it's
  * not available beyond the input record.
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(SetTransientVariable.NAME)
 @Categories(categories = { "transient"})
 @Description("Sets the value for a transient variable for the record being processed.")

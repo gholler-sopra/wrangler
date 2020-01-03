@@ -44,7 +44,7 @@ import java.util.Set;
 /**
  * A directive for incrementing the a transient variable based on conditions.
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(IncrementTransientVariable.NAME)
 @Categories(categories = { "transient"})
 @Description("Wrangler - A interactive tool for data cleansing and transformation.")
