@@ -60,7 +60,7 @@ import java.util.Map;
 /**
  * A directives that invokes HTTP endpoint to merge the results back into dataset.
  */
-//@Plugin(type = Directive.Type)
+@Plugin(type = Directive.Type)
 @Name(InvokeHttp.NAME)
 @Categories(categories = { "http"})
 @Description("[EXPERIMENTAL] Invokes an HTTP endpoint, passing columns as a JSON map (potentially slow).")
