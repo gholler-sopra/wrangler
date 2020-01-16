@@ -36,6 +36,7 @@ import co.cask.wrangler.dataset.connections.ConnectionStore;
 import co.cask.wrangler.dataset.workspace.DataType;
 import co.cask.wrangler.dataset.workspace.WorkspaceDataset;
 import co.cask.wrangler.service.common.Format;
+import co.cask.wrangler.service.common.WorkspaceUtils;
 import co.cask.wrangler.service.connections.ConnectionType;
 
 import com.hortonworks.registries.schemaregistry.client.SchemaRegistryClient;
@@ -93,6 +94,8 @@ import javax.ws.rs.QueryParam;
 import static co.cask.wrangler.ServiceUtils.error;
 import static co.cask.wrangler.ServiceUtils.sendJson;
 import static co.cask.wrangler.service.directive.DirectivesService.WORKSPACE_DATASET;
+
+import static co.cask.wrangler.PropertyIds.*;
 
 /**
  * Service for handling Kafka connections.
@@ -230,12 +233,10 @@ public final class KafkaService extends AbstractHttpServiceHandler {
           return;
         }
 
-        if (scope == null || scope.isEmpty()) {
-          scope = WorkspaceDataset.DEFAULT_SCOPE;
-        }
+        String effectiveScope = WorkspaceUtils.getScope(scope, request.getHeader(USER_ID), getContext().getRuntimeArguments());
 
-        String uuid = ServiceUtils.generateMD5(String.format("%s:%s.%s", scope, id, topic));
-        ws.createWorkspaceMeta(uuid, scope, topic);
+        String uuid = ServiceUtils.generateMD5(String.format("%s:%s.%s", effectiveScope, id, topic));
+        ws.createWorkspaceMeta(uuid, effectiveScope, topic);
         KafkaConfiguration config = new KafkaConfiguration(connection, runtimeArgs);
         List<Row> recs = new ArrayList<>();
         boolean running = true;

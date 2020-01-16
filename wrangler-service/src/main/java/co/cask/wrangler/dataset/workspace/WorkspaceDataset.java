@@ -52,7 +52,7 @@ public class WorkspaceDataset extends AbstractDataset {
   private final Table table;
   private final Gson gson;
 
-  public static final String DEFAULT_SCOPE = "default";
+  public static final String DEFAULT_SCOPE = "public";
   public static final byte[] CONFIG_KEY     = Bytes.toBytes("__config__");
   public static final byte[] CONFIG_COL     = Bytes.toBytes("__ws__");
   public static final byte[] DATA_COL       = Bytes.toBytes("data");
