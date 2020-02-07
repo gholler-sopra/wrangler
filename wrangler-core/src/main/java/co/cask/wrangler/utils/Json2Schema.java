@@ -108,9 +108,14 @@ public final class Json2Schema {
       }
 
       // TODO - remove all the instaces of java.util.Date once all the directives support LogicalType.
-      if (value instanceof Date || value instanceof java.sql.Date || value instanceof Time
+      if (value instanceof java.sql.Date || value instanceof Time
         || value instanceof Timestamp) {
         Schema schema = Schema.nullableOf(Schema.of(Schema.Type.LONG));
+        fields.add(Schema.Field.of(name, schema));
+      }
+
+      if (value instanceof Date) {
+        Schema schema = Schema.nullableOf(Schema.of(Schema.LogicalType.DATE));
         fields.add(Schema.Field.of(name, schema));
       }
 
