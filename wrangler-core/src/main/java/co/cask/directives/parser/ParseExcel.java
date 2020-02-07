@@ -38,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CellValue;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
@@ -64,6 +65,7 @@ public class ParseExcel implements Directive {
   private String column;
   private String sheet;
   private boolean firstRowAsHeader = false;
+  private boolean excelDataType = false;
 
   @Override
   public UsageDefinition define() {
@@ -71,6 +73,8 @@ public class ParseExcel implements Directive {
     builder.define("column", TokenType.COLUMN_NAME);
     builder.define("sheet", TokenType.TEXT, Optional.TRUE);
     builder.define("first-row-as-header", TokenType.BOOLEAN, Optional.TRUE);
+    builder.define("use-excel-datatype", TokenType.BOOLEAN, Optional.FALSE);
+
     return builder.build();
   }
 
@@ -84,6 +88,10 @@ public class ParseExcel implements Directive {
     }
     if (args.contains("first-row-as-header")) {
       this.firstRowAsHeader = ((Boolean) args.value("first-row-as-header").value());
+    }
+
+    if (args.contains("use-excel-datatype")) {
+      this.excelDataType = ((Boolean) args.value("use-excel-datatype").value());
     }
   }
 
@@ -153,23 +161,36 @@ public class ParseExcel implements Directive {
                 }
                 String value = "";
                 switch (cell.getCellTypeEnum()) {
+
+                  case NUMERIC:
+                    if (HSSFDateUtil.isCellDateFormatted(cell)) {
+                      if(excelDataType) {
+                        newRow.add(name, cell.getDateCellValue());
+                      }else{
+                        newRow.add(name, cell.getDateCellValue().toString());
+                      }
+                      value = cell.getDateCellValue().toString();
+                    } else {
+                      if(excelDataType) {
+                        newRow.add(name, cell.getNumericCellValue());
+                      }else{
+                        newRow.add(name, Double.toString(cell.getNumericCellValue()));
+                      }
+                      value = String.valueOf(cell.getNumericCellValue());
+                    }
+                    break;
+
                   case STRING:
                     newRow.add(name, cell.getStringCellValue());
                     value = cell.getStringCellValue();
                     break;
 
-                  case NUMERIC:
-                    if (HSSFDateUtil.isCellDateFormatted(cell)) {
-                      newRow.add(name, cell.getDateCellValue());
-                      value = cell.getDateCellValue().toString();
-                    } else {
-                      newRow.add(name, cell.getNumericCellValue());
-                      value = String.valueOf(cell.getNumericCellValue());
-                    }
-                    break;
-
                   case BOOLEAN:
-                    newRow.add(name, cell.getBooleanCellValue());
+                    if(excelDataType){
+                      newRow.add(name, cell.getBooleanCellValue());
+                    }else {
+                      newRow.add(name, String.valueOf(cell.getBooleanCellValue()));
+                    }
                     value = String.valueOf(cell.getBooleanCellValue());
                     break;
                 }
@@ -198,6 +219,7 @@ public class ParseExcel implements Directive {
         }
       }
     } catch (Exception e) {
+      LOG.info("parsing error :{}",e.getCause());
       throw new ErrorRowException(e.getMessage(), 1);
     } finally {
       if (input != null) {
@@ -205,6 +227,45 @@ public class ParseExcel implements Directive {
       }
     }
     return results;
+  }
+
+  private String getFormulaValue(CellValue cellValue, Row newRow, String name, Cell cell) {
+      String value = "";
+      if (cellValue == null) {
+        return null;
+      }
+      
+	  switch (cellValue.getCellTypeEnum()) {
+      case STRING:
+        newRow.add(name, cellValue.getStringValue());
+        value = cellValue.getStringValue();
+        break;
+
+      case NUMERIC:
+        if (HSSFDateUtil.isValidExcelDate(cellValue.getNumberValue()) && HSSFDateUtil.isInternalDateFormat(cell.getCellStyle().getDataFormat())) {
+          value = HSSFDateUtil.getJavaDate(cellValue.getNumberValue()).toString();
+          newRow.add(name, value);
+    	} else {
+          if(excelDataType) {
+            newRow.add(name, cellValue.getNumberValue());
+          }else{
+            newRow.add(name, Double.toString(cellValue.getNumberValue()));
+          }
+          value = String.valueOf(cellValue.getNumberValue());
+    	}
+        break;
+      case BOOLEAN:
+        if(excelDataType){
+          newRow.add(name, cellValue.getBooleanValue());
+        }else {
+          newRow.add(name, String.valueOf(cellValue.getBooleanValue()));
+        }
+        value = String.valueOf(cellValue.getBooleanValue());
+        break;
+      default:
+        break;
+    }
+    return value;
   }
 
   private boolean checkIfRowIsEmpty(org.apache.poi.ss.usermodel.Row row) {
