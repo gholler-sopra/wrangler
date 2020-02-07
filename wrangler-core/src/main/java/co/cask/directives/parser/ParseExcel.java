@@ -47,8 +47,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -69,6 +67,7 @@ public class ParseExcel implements Directive {
   private String column;
   private String sheet;
   private boolean firstRowAsHeader = false;
+  private boolean excelDataType = false;
 
   @Override
   public UsageDefinition define() {
@@ -76,6 +75,8 @@ public class ParseExcel implements Directive {
     builder.define("column", TokenType.COLUMN_NAME);
     builder.define("sheet", TokenType.TEXT, Optional.TRUE);
     builder.define("first-row-as-header", TokenType.BOOLEAN, Optional.TRUE);
+    builder.define("use-excel-datatype", TokenType.BOOLEAN, Optional.FALSE);
+
     return builder.build();
   }
 
@@ -89,6 +90,10 @@ public class ParseExcel implements Directive {
     }
     if (args.contains("first-row-as-header")) {
       this.firstRowAsHeader = ((Boolean) args.value("first-row-as-header").value());
+    }
+
+    if (args.contains("use-excel-datatype")) {
+      this.excelDataType = ((Boolean) args.value("use-excel-datatype").value());
     }
   }
 
@@ -159,23 +164,36 @@ public class ParseExcel implements Directive {
                 }
                 String value = "";
                 switch (cell.getCellTypeEnum()) {
+
+                  case NUMERIC:
+                    if (HSSFDateUtil.isCellDateFormatted(cell)) {
+                      if(excelDataType) {
+                        newRow.add(name, cell.getDateCellValue());
+                      }else{
+                        newRow.add(name, cell.getDateCellValue().toString());
+                      }
+                      value = cell.getDateCellValue().toString();
+                    } else {
+                      if(excelDataType) {
+                        newRow.add(name, cell.getNumericCellValue());
+                      }else{
+                        newRow.add(name, String.valueOf(cell.getNumericCellValue()));
+                      }
+                      value = String.valueOf(cell.getNumericCellValue());
+                    }
+                    break;
+
                   case STRING:
                     newRow.add(name, cell.getStringCellValue());
                     value = cell.getStringCellValue();
                     break;
 
-                  case NUMERIC:
-                    if (HSSFDateUtil.isCellDateFormatted(cell)) {
-                      newRow.add(name, cell.getDateCellValue().toString());
-                      value = cell.getDateCellValue().toString();
-                    } else {
-                      newRow.add(name, cell.getNumericCellValue());
-                      value = String.valueOf(cell.getNumericCellValue());
-                    }
-                    break;
-
                   case BOOLEAN:
-                    newRow.add(name, cell.getBooleanCellValue());
+                    if(excelDataType){
+                      newRow.add(name, cell.getBooleanCellValue());
+                    }else {
+                      newRow.add(name, String.valueOf(cell.getBooleanCellValue()));
+                    }
                     value = String.valueOf(cell.getBooleanCellValue());
                     break;
                   case FORMULA:
@@ -208,6 +226,7 @@ public class ParseExcel implements Directive {
         }
       }
     } catch (Exception e) {
+      LOG.info("parsing error :{}",e.getCause());
       throw new ErrorRowException(e.getMessage(), 1);
     } finally {
       if (input != null) {
@@ -234,12 +253,20 @@ public class ParseExcel implements Directive {
           value = HSSFDateUtil.getJavaDate(cellValue.getNumberValue()).toString();
           newRow.add(name, value);
     	} else {
-          newRow.add(name, cellValue.getNumberValue());
+          if(excelDataType) {
+            newRow.add(name, cellValue.getNumberValue());
+          }else{
+            newRow.add(name, String.valueOf(cellValue.getNumberValue()));
+          }
           value = String.valueOf(cellValue.getNumberValue());
     	}
         break;
       case BOOLEAN:
-        newRow.add(name, cellValue.getBooleanValue());
+        if(excelDataType){
+          newRow.add(name, cellValue.getBooleanValue());
+        }else {
+          newRow.add(name, String.valueOf(cellValue.getBooleanValue()));
+        }
         value = String.valueOf(cellValue.getBooleanValue());
         break;
       default:
