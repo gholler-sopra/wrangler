@@ -177,7 +177,7 @@ public class ParseExcel implements Directive {
                       if(excelDataType) {
                         newRow.add(name, cell.getNumericCellValue());
                       }else{
-                        newRow.add(name, Double.toString(cell.getNumericCellValue()));
+                        newRow.add(name, String.valueOf(cell.getNumericCellValue()));
                       }
                       value = String.valueOf(cell.getNumericCellValue());
                     }
@@ -256,7 +256,7 @@ public class ParseExcel implements Directive {
           if(excelDataType) {
             newRow.add(name, cellValue.getNumberValue());
           }else{
-            newRow.add(name, Double.toString(cellValue.getNumberValue()));
+            newRow.add(name, String.valueOf(cellValue.getNumberValue()));
           }
           value = String.valueOf(cellValue.getNumberValue());
     	}
