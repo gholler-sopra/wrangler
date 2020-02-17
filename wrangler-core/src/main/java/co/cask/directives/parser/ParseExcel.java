@@ -48,9 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
-import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -172,10 +170,8 @@ public class ParseExcel implements Directive {
                   case NUMERIC:
                     if (HSSFDateUtil.isCellDateFormatted(cell)) {
                       if(excelDataType) {
-                        ZonedDateTime zonedDateTime = ZonedDateTime.from(cell.getDateCellValue().toInstant()
-                            .atZone(ZoneId.ofOffset("UTC", ZoneOffset.UTC)));
-                        LocalDate lDate = zonedDateTime.toLocalDate();
-                        newRow.add(name, lDate);
+                        ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(cell.getDateCellValue().toInstant(),ZoneId.systemDefault());
+                        newRow.add(name, zonedDateTime);
                       }else{
                         newRow.add(name, cell.getDateCellValue().toString());
                       }
