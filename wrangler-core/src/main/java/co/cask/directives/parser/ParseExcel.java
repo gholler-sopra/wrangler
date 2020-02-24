@@ -50,11 +50,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * A step to parse Excel files.
@@ -188,6 +184,7 @@ public class ParseExcel implements Directive {
                     break;
 
                   case STRING:
+                  case BLANK:
                     newRow.add(name, cell.getStringCellValue());
                     value = cell.getStringCellValue();
                     break;
@@ -207,6 +204,10 @@ public class ParseExcel implements Directive {
                 }
 
                 if (rows == 0 && firstRowAsHeader) {
+                  if("".equals(value)) {
+                    // Renaming the blank column to "header_{column_index}"
+                    value = "header_" + cell.getAddress().getColumn();
+                  }
                   columnNames.put(cell.getAddress().getColumn(), value);
                 }
               }
