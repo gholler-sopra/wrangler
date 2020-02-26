@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 /**
@@ -153,7 +154,13 @@ public class ParseExcel implements Directive {
               }
 
               Row newRow = new Row();
-              newRow.add("fwd", rows);
+              newRow.addOrSet("fwd", rows);
+              
+              if (firstRowAsHeader && rows > 0) {
+                for (Entry<Integer, String> entry: columnNames.entrySet()) {
+                  newRow.addOrSet(entry.getValue(), "");
+                }
+              }
 
               while (cellIterator.hasNext()) {
                 Cell cell = cellIterator.next();
@@ -171,31 +178,31 @@ public class ParseExcel implements Directive {
                     if (HSSFDateUtil.isCellDateFormatted(cell)) {
                       if(excelDataType) {
                         ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(cell.getDateCellValue().toInstant(),ZoneId.systemDefault());
-                        newRow.add(name, zonedDateTime);
+                        newRow.addOrSet(name, zonedDateTime);
                       }else{
-                        newRow.add(name, cell.getDateCellValue().toString());
+                        newRow.addOrSet(name, cell.getDateCellValue().toString());
                       }
                       value = cell.getDateCellValue().toString();
                     } else {
                       if(excelDataType) {
-                        newRow.add(name, cell.getNumericCellValue());
+                        newRow.addOrSet(name, cell.getNumericCellValue());
                       }else{
-                        newRow.add(name, String.valueOf(cell.getNumericCellValue()));
+                        newRow.addOrSet(name, String.valueOf(cell.getNumericCellValue()));
                       }
                       value = String.valueOf(cell.getNumericCellValue());
                     }
                     break;
 
                   case STRING:
-                    newRow.add(name, cell.getStringCellValue());
+                    newRow.addOrSet(name, cell.getStringCellValue());
                     value = cell.getStringCellValue();
                     break;
 
                   case BOOLEAN:
                     if(excelDataType){
-                      newRow.add(name, cell.getBooleanCellValue());
+                      newRow.addOrSet(name, cell.getBooleanCellValue());
                     }else {
-                      newRow.add(name, String.valueOf(cell.getBooleanCellValue()));
+                      newRow.addOrSet(name, String.valueOf(cell.getBooleanCellValue()));
                     }
                     value = String.valueOf(cell.getBooleanCellValue());
                     break;
@@ -247,28 +254,28 @@ public class ParseExcel implements Directive {
       
 	  switch (cellValue.getCellTypeEnum()) {
       case STRING:
-        newRow.add(name, cellValue.getStringValue());
+        newRow.addOrSet(name, cellValue.getStringValue());
         value = cellValue.getStringValue();
         break;
 
       case NUMERIC:
         if (HSSFDateUtil.isValidExcelDate(cellValue.getNumberValue()) && HSSFDateUtil.isInternalDateFormat(cell.getCellStyle().getDataFormat())) {
           value = HSSFDateUtil.getJavaDate(cellValue.getNumberValue()).toString();
-          newRow.add(name, value);
+          newRow.addOrSet(name, value);
     	} else {
           if(excelDataType) {
-            newRow.add(name, cellValue.getNumberValue());
+            newRow.addOrSet(name, cellValue.getNumberValue());
           }else{
-            newRow.add(name, String.valueOf(cellValue.getNumberValue()));
+            newRow.addOrSet(name, String.valueOf(cellValue.getNumberValue()));
           }
           value = String.valueOf(cellValue.getNumberValue());
     	}
         break;
       case BOOLEAN:
         if(excelDataType){
-          newRow.add(name, cellValue.getBooleanValue());
+          newRow.addOrSet(name, cellValue.getBooleanValue());
         }else {
-          newRow.add(name, String.valueOf(cellValue.getBooleanValue()));
+          newRow.addOrSet(name, String.valueOf(cellValue.getBooleanValue()));
         }
         value = String.valueOf(cellValue.getBooleanValue());
         break;
