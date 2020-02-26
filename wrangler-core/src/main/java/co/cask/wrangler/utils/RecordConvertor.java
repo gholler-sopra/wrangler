@@ -395,8 +395,8 @@ public final class RecordConvertor implements Serializable {
 
   private List<Object> decodeArray(String name, JsonArray list, Schema schema) throws RecordConvertorException {
     List<Object> array = Lists.newArrayListWithCapacity(list.size());
-    for (int i = 0; i < list.size(); ++i) {
-      array.add(decode(name, list.get(i), schema));
+    for (Object object : list) {
+      array.add(decode(name, object, schema));
     }
     return array;
   }
