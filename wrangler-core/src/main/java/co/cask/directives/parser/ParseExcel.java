@@ -151,7 +151,7 @@ public class ParseExcel implements Directive {
               newRow.add("fwd", rows);
 
               // Using for loop instead of Cell Iterator because Iterator skips the null/blank cells.
-              for(int rowIndex = row.getFirstCellNum(); rowIndex < row.getLastCellNum(); rowIndex++) {
+              for(int rowIndex = 0; rowIndex < row.getLastCellNum(); rowIndex++) {
                 // A new, blank cell is created for missing cells instead of null.
                 Cell cell = row.getCell(rowIndex, org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                 String name = columnName(cell.getAddress().getColumn());
