@@ -1,6 +1,6 @@
-# Data Prep Transform
+# Wrangler
 
-The Data Prep Transform (Wrangler) accelerator is used to apply data transformation directives to your data records. The directives can be applied either through the Data Preparation visual interface or by manually configuring the Wrangler accelerator and specifying the required directives to perform data transformations.
+Wrangler (Data Prep Transform) accelerator is used to apply data transformation directives to your data records. The directives can be applied either through the Data Preparation visual interface or by manually configuring the Wrangler accelerator and specifying the required directives to perform data transformations.
 
 ## Plugin Configuration
 
