@@ -14,6 +14,76 @@
     <name>Hydrator Core Plugins Bundle</name>
     <artifactId>core-plugins-bundle</artifactId>
 
-    <version>2.1.1_5.1.216-SNAPSHOT</version>
+    <version>3.2.0_5.1.216</version>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>co.cask.wrangler</groupId>
+            <artifactId>wrangler-transform-all</artifactId>
+            <version>${parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.14.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>3.3.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Embed-Dependency>*;inline=true;scope=compile</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
+                        <Embed-Directory>lib</Embed-Directory>
+                        <!--Only @Plugin classes in the export packages will be included as plugin-->
+                        <_exportcontents>co.cask.wrangler.*</_exportcontents>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>bundle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>co.cask</groupId>
+                <artifactId>cdap-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <configuration>
+                    <cdapArtifacts>
+                        <parent>system:cdap-data-pipeline[5.1.0,6.0.0-SNAPSHOT)</parent>
+                        <parent>system:cdap-data-streams[5.1.0,6.0.0-SNAPSHOT)</parent>
+                        <parent>system:mmds-app[1.1.0-SNAPSHOT,2.0.0-SNAPSHOT)</parent>
+                    </cdapArtifacts>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>create-artifact-config</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>create-plugin-json</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

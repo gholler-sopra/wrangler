@@ -14,4 +14,39 @@
     <name>wrangler-transform</name>
     <artifactId>wrangler-transform-all</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>co.cask.wrangler</groupId>
+            <artifactId>wrangler-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>co.cask.cdap</groupId>
+            <artifactId>cdap-api</artifactId>
+            <version>${cdap.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>co.cask.cdap</groupId>
+            <artifactId>cdap-etl-api</artifactId>
+            <version>${cdap.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+    </dependencies>
+
 </project>
